@@ -1,5 +1,4 @@
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
 
 export async function getAdminAuth() {
   if (!getApps().length) {
@@ -11,6 +10,11 @@ export async function getAdminAuth() {
       }),
     });
   }
+
+  // Bypass Turbopack static analysis by evaluating the import at runtime
+  const { getAuth } = await (eval(`import('firebase-admin/auth')`) as Promise<
+    typeof import('firebase-admin/auth')
+  >);
 
   return getAuth();
 }
