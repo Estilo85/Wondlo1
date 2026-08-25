@@ -11,6 +11,7 @@ export async function getAdminAuth() {
     });
   }
 
-  const { getAuth } = await import('firebase-admin/auth');
-  return getAuth();
+  // Bypasses static analysis by Next.js/Turbopack bundlers
+  const authModule = await (eval(`import('firebase-admin/auth')`) as Promise<typeof import('firebase-admin/auth')>);
+  return authModule.getAuth();
 }
