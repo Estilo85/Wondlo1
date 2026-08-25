@@ -1,4 +1,7 @@
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export async function getAdminAuth() {
   if (!getApps().length) {
@@ -11,7 +14,7 @@ export async function getAdminAuth() {
     });
   }
 
-  // Bypasses static analysis by Next.js/Turbopack bundlers
-  const authModule = await (eval(`import('firebase-admin/auth')`) as Promise<typeof import('firebase-admin/auth')>);
-  return authModule.getAuth();
+  // Forces native CJS module loading at runtime on Vercel
+  const firebaseAdmin = require('firebase-admin');
+  return firebaseAdmin.auth();
 }
