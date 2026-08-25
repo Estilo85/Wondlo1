@@ -11,7 +11,6 @@ export async function getAdminAuth() {
     });
   }
 
-  // Dynamic import prevents Turbopack from bundling jwks-rsa/jose at build time
   const { getAuth } = await import('firebase-admin/auth');
   return getAuth();
 }
