@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
-import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -14,7 +13,6 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,10 +21,10 @@ export default function SignInPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('https://t.me/joinwandlo');
+      // Clean external redirect to your Telegram group
+      window.location.href = 'https://t.me/joinwandlo';
     } catch (err: any) {
       setError(err.message || 'Invalid credentials.');
-    } finally {
       setLoading(false);
     }
   };

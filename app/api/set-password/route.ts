@@ -1,31 +1,34 @@
 import { NextResponse } from 'next/server';
-import { getAdminAuth } from '@/lib/firebase-admin';
+import { updateFirebasePassword } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
-    const { email, newPassword } = await req.json();
+    const { email, password } = await req.json();
 
-    if (!email || !newPassword) {
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Missing required parameters.' },
+        { error: 'Email and password are required.' },
         { status: 400 }
       );
     }
 
-    const adminAuth = await getAdminAuth();
-    const user = await adminAuth.getUserByEmail(email);
-    await adminAuth.updateUser(user.uid, { password: newPassword });
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long.' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(
-      { message: 'Password updated successfully.' },
-      { status: 200 }
-    );
+    // Update the password in Firebase Auth via REST API
+    await updateFirebasePassword(email, password);
+
+    return NextResponse.json({ success: true, message: 'Password successfully updated.' }, { status: 200 });
   } catch (error: any) {
     console.error('Set password error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update password.' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     );
   }
