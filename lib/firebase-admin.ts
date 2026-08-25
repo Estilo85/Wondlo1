@@ -1,7 +1,5 @@
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
+import { getAuth } from 'firebase-admin/auth';
 
 export async function getAdminAuth() {
   if (!getApps().length) {
@@ -14,7 +12,5 @@ export async function getAdminAuth() {
     });
   }
 
-  // Forces native CJS module loading at runtime on Vercel
-  const firebaseAdmin = require('firebase-admin');
-  return firebaseAdmin.auth();
+  return getAuth();
 }
