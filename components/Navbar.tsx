@@ -1,20 +1,29 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
 
-  const isHome = pathname === '/';
-  const isSignIn = pathname === '/signin';
-  const isSignUp = pathname === '/signup';
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isHome = mounted && pathname === '/';
+  const isSignIn = mounted && pathname === '/signin';
+  const isSignUp = mounted && (pathname === '/signup' || (!isSignIn && !isHome));
 
   return (
     <nav className="w-full bg-white border-b border-[#EDE7FB] py-4 px-6 sm:px-12 flex items-center justify-between">
       {/* Brand Logo Text Only */}
       <div className="flex items-center">
-        <Link href="/" className="font-poppins font-bold text-xl text-[#2B2740] tracking-tight">
+        <Link 
+          href="/" 
+          className="font-poppins font-bold text-xl text-[#2B2740] tracking-tight"
+        >
           Wondlo
         </Link>
       </div>
@@ -53,7 +62,7 @@ export default function Navbar() {
           <Link
             href="/signup"
             className={
-              isSignUp || (!isSignIn && !isHome)
+              isSignUp
                 ? 'px-4 py-1.5 rounded-lg bg-[#7E6BB3] text-white font-poppins font-semibold text-xs hover:bg-[#68559D] transition-colors shadow-xs'
                 : 'px-4 py-1.5 rounded-lg border border-[#EDE7FB] text-[#2B2740] font-poppins font-semibold text-xs hover:bg-[#F6F4FE] transition-colors'
             }
