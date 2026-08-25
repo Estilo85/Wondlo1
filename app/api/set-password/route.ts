@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase-admin';
+import { getAdminAuth } from '@/lib/firebase-admin';
+
+export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
@@ -9,6 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required parameters.' }, { status: 400 });
     }
 
+    const adminAuth = await getAdminAuth();
     const user = await adminAuth.getUserByEmail(email);
     await adminAuth.updateUser(user.uid, { password: newPassword });
 
