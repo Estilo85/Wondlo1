@@ -57,10 +57,10 @@ export async function POST(req: Request) {
       await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL || 'partnership@joinwondlo.com',
         to: [email],
-        subject: 'Welcome to ZagoTours - Set Your Password',
+        subject: 'Welcome to Wondlo - Set Your Password',
         html: `
           <div style="font-family: Arial, sans-serif; padding: 20px; color: #2B2740;">
-            <h2>Welcome to ZagoTours, ${name}!</h2>
+            <h2>Welcome to Wondlo, ${name}!</h2>
             <p>Thank you for signing up. To secure your account, please click the button below to set your password:</p>
             <a href="${setPasswordLink}" style="background-color: #9B88ED; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 15px; font-weight: bold;">Set Your Password</a>
             <p style="margin-top: 20px; color: #666; font-size: 14px;">Once your password is set, you can sign in to access our community.</p>
