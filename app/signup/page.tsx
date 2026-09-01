@@ -133,7 +133,7 @@ export default function SignupPage() {
                   <span className="font-semibold">
                     {email}
                   </span>{' '}
-                  from ZagoTours. Please check your inbox and
+                  from Wondlo. Please check your inbox and
                   click the link to set your password before
                   signing in.
                 </p>
