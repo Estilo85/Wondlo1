@@ -49,21 +49,26 @@ export async function POST(req: Request) {
       },
     });
 
-    // Send welcome email with password setup link using Resend
+    // Send professional welcome email with password setup link using Resend
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const setPasswordLink = `${baseUrl}/set-password?email=${encodeURIComponent(email)}`;
 
     try {
       await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'partnerships@zagotours.com',
+        from: 'partnership@joinwondlo.com',
         to: [email],
-        subject: 'Welcome to ZagoTours - Set Your Password',
+        subject: 'Welcome to Wondlo — Secure Your Account',
         html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; color: #2B2740;">
-            <h2>Welcome to ZagoTours, ${name}!</h2>
-            <p>Thank you for signing up. To secure your account, please click the button below to set your password:</p>
-            <a href="${setPasswordLink}" style="background-color: #9B88ED; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 15px; font-weight: bold;">Set Your Password</a>
-            <p style="margin-top: 20px; color: #666; font-size: 14px;">Once your password is set, you can sign in to access our community.</p>
+          <div style="font-family: 'Inter', Arial, sans-serif; padding: 30px; color: #2B2740; background-color: #FAF9FE; max-width: 600px; margin: 0 auto; border-radius: 12px; border: 1px solid #EDE7FB;">
+            <h2 style="color: #7E6BB3; margin-top: 0; font-size: 24px;">Welcome to Wondlo, ${name}!</h2>
+            <p style="font-size: 16px; line-height: 1.5; color: #4A4560;">Thank you for registering with us. We are thrilled to welcome you to our travel safety platform built around our core philosophy: <strong>Safety as a System™</strong>.</p>
+            <p style="font-size: 16px; line-height: 1.5; color: #4A4560;">To finalize your registration and secure your profile, please establish your password by clicking the secure link below:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${setPasswordLink}" style="background-color: #7E6BB3; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(126, 107, 179, 0.2);">Set Your Password</a>
+            </div>
+            <p style="font-size: 14px; line-height: 1.5; color: #6E6B80;">If you did not request this registration, please disregard this email or contact our support team immediately.</p>
+            <hr style="border: none; border-top: 1px solid #EDE7FB; margin: 25px 0;" />
+            <p style="font-size: 12px; color: #9A95B0; text-align: center;">Wondlo • Safety as a System™ • 71–75 Shelton Street, United Kingdom</p>
           </div>
         `,
       });

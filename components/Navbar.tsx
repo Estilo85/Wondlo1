@@ -41,9 +41,6 @@ export default function Navbar() {
           >
             HOME
           </Link>
-          <Link href="/community" className="hover:text-[#2B2740] transition-colors">
-            COMMUNITY
-          </Link>
         </div>
         <div className="flex items-center space-x-2">
           {/* Sign In Button */}
