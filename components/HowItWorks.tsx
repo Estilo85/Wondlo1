@@ -91,13 +91,13 @@ export default function HowItWorks() {
 
 
           {/* =================================================
-              DESKTOP CONTENT
+              DESKTOP / TABLET CONTENT
           ================================================== */}
           <div
             className="
               relative
               mx-6
-              mt-[10px]
+              mt-[0px]
               hidden
               min-h-[450px]
               md:block
@@ -117,15 +117,55 @@ export default function HowItWorks() {
             >
 
               {/* =================================================
-                  CURVED PATH
+                  TABLET CURVED PATH
+                  md -> lg only
               ================================================== */}
               <svg
-                className="pointer-events-none absolute z-0"
+                className="
+                  pointer-events-none
+                  absolute
+                  z-0
+                  md:left-[50%]
+                  md:top-[42%]
+                  md:h-[280px]
+                  md:w-[390px]
+                  md:max-lg:block
+                  lg:hidden
+                "
                 style={{
-                  width: '320px',
-                  height: '220px',
-                  left: '50%',
-                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+                viewBox="0 0 320 220"
+                fill="none"
+                preserveAspectRatio="none"
+              >
+                <path
+                  d="M 55,190 C 95,265 175,235 215,140 C 235,98 260,42 285,65"
+                  stroke="#C7B5F5"
+                  strokeWidth="3.5"
+                  strokeDasharray="7 7"
+                  strokeLinecap="round"
+                />
+              </svg>
+
+
+              {/* =================================================
+                  DESKTOP CURVED PATH
+                  ORIGINAL PATH — DO NOT CHANGE
+              ================================================== */}
+              <svg
+                className="
+                  pointer-events-none
+                  absolute
+                  z-0
+                  hidden
+                  lg:left-[50%]
+                  lg:top-[46%]
+                  lg:block
+                  lg:h-[220px]
+                  lg:w-[320px]
+                "
+                style={{
                   transform: 'translate(-50%, -50%)',
                 }}
                 viewBox="0 0 320 220"
@@ -153,12 +193,18 @@ export default function HowItWorks() {
                   border-2
                   border-white
                   shadow-[0_8px_20px_rgba(0,0,0,0.12)]
+
+                  /* TABLET */
+                  md:bottom-[92px]
+                  md:max-lg:left-[43%]
+
+                  /* DESKTOP - ORIGINAL */
+                  lg:bottom-[88px]
+                  lg:left-[14%]
                 "
                 style={{
                   width: '176px',
                   height: '128px',
-                  left: '14%',
-                  bottom: '75px',
                 }}
               >
                 <Image
@@ -182,12 +228,18 @@ export default function HowItWorks() {
                   border-2
                   border-white
                   shadow-[0_8px_20px_rgba(0,0,0,0.12)]
+
+                  /* TABLET */
+                  md:top-[50px]
+                  md:max-lg:right-[27%]
+
+                  /* DESKTOP - MOVED SLIGHTLY LEFT */
+                  lg:right-[17%]
+                  lg:top-[52px]
                 "
                 style={{
                   width: '176px',
                   height: '128px',
-                  right: '14%',
-                  top: '65px',
                 }}
               >
                 <Image
@@ -212,6 +264,8 @@ export default function HowItWorks() {
                 left-1/2
                 z-20
                 w-0
+                md:translate-y-[-22px]
+                lg:translate-y-[-42px]
               "
             >
 
@@ -220,7 +274,7 @@ export default function HowItWorks() {
                   key={step.number}
                   className="absolute h-[50px] w-[50px]"
                   style={{
-                    top: `${index * 106 + 48}px`,
+                    top: `${index * 106 + 20}px`,
                     left: '-25px',
                   }}
                 >
@@ -253,7 +307,13 @@ export default function HowItWorks() {
                 RIGHT STEP CONTENT
             ================================================== */}
             <div
-              className="absolute inset-y-0 right-0"
+              className="
+                absolute
+                inset-y-0
+                right-0
+                md:translate-y-[-22px]
+                lg:translate-y-[-42px]
+              "
               style={{
                 width: '50%',
                 paddingLeft: '45px',
@@ -261,7 +321,7 @@ export default function HowItWorks() {
               }}
             >
 
-              <div className="flex h-full flex-col justify-center py-[30px]">
+              <div className="flex h-full flex-col justify-start py-[20px]">
 
                 <div className="space-y-[18px]">
 
@@ -271,9 +331,6 @@ export default function HowItWorks() {
                       className="relative min-h-[88px]"
                     >
 
-                      {/* =================================================
-                          STEP CONTENT
-                      ================================================== */}
                       <div className="relative max-w-[500px] pr-[48px]">
 
                         <h3
@@ -288,7 +345,6 @@ export default function HowItWorks() {
                           {step.title}
                         </h3>
 
-
                         <p
                           className="mt-2"
                           style={{
@@ -302,10 +358,6 @@ export default function HowItWorks() {
                           {step.description}
                         </p>
 
-
-                        {/* =================================================
-                            STEP ICON
-                        ================================================== */}
                         <div
                           className="
                             absolute
@@ -340,9 +392,9 @@ export default function HowItWorks() {
           </div>
 
 
-          {/* =================================================
+          {/* =====================================================
               MOBILE CONTENT
-          ================================================== */}
+          ====================================================== */}
           <div className="md:hidden">
 
             {/* =================================================
@@ -493,7 +545,6 @@ export default function HowItWorks() {
                       </span>
                     </div>
 
-
                     {/* CONTENT */}
                     <div className="min-w-0 flex-1 pt-[2px]">
 
@@ -510,7 +561,6 @@ export default function HowItWorks() {
                         >
                           {step.title}
                         </h3>
-
 
                         {/* ICON */}
                         <div
@@ -532,7 +582,6 @@ export default function HowItWorks() {
                         </div>
 
                       </div>
-
 
                       <p
                         className="mt-2"

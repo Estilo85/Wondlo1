@@ -36,28 +36,8 @@ const bannerImages = [
 
 const safetyCards: SafetyCardData[] = [
   {
-    score: 85,
-    status: 'Good',
-    provider: 'Summit Trails Expeditions',
-    details: [
-      {
-        label: 'Incident History',
-        value: '5 Years - No Reported Incidents',
-      },
-      {
-        label: 'Equipment Maintenance',
-        value: 'Inspection Every 3 Months',
-      },
-      {
-        label: 'Operational Transparency',
-        value: 'Registered & Licensed',
-      },
-    ],
-    isExample: true,
-  },
-  {
     score: 75,
-    status: 'Moderate',
+    status: 'Good',
     provider: 'Example Provider',
     details: [
       {
@@ -173,8 +153,8 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({
-  score = 85,
-  operatorName = 'Summit Trails Expeditions',
+  score = 75,
+  operatorName = 'Example Provider',
   ratingText = 'Good',
 }: HeroSectionProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -207,7 +187,7 @@ export default function HeroSection({
         );
 
         setIsCardVisible(true);
-      }, 350);
+      }, 500);
 
       return () => clearTimeout(timeout);
     }, 60000);
@@ -841,7 +821,7 @@ export default function HeroSection({
                 className={`
                   absolute
                   right-[-2%]
-                  top-[245px]
+                  top-[215px]
                   z-40
                   w-[292px]
                   rounded-[20px]
@@ -851,11 +831,12 @@ export default function HeroSection({
                   p-[16px]
                   shadow-[0_18px_45px_rgba(43,39,64,0.16)]
                   transition-all
-                  duration-350
+                  duration-600
+                  ease-out
                   ${
                     isCardVisible
-                      ? 'translate-y-0 opacity-100'
-                      : 'translate-y-1 opacity-0'
+                      ? 'translate-y-0 translate-x-0 scale-100 opacity-100'
+                      : 'translate-y-4 translate-x-3 scale-[0.97] opacity-0'
                   }
                 `}
               >
@@ -952,11 +933,12 @@ export default function HeroSection({
                 p-4
                 shadow-[0_15px_35px_rgba(43,39,64,0.15)]
                 transition-all
-                duration-350
+                duration-600
+                ease-out
                 ${
                   isCardVisible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-1 opacity-0'
+                    ? 'translate-y-0 translate-x-0 scale-100 opacity-100'
+                    : 'translate-y-4 translate-x-3 scale-[0.97] opacity-0'
                 }
               `}
             >
@@ -993,6 +975,13 @@ function SafetyCardContent({
   activeCardIndex: number;
   desktop?: boolean;
 }) {
+  const statusColor =
+    card.score === 25
+      ? '#D94A4A'
+      : card.score === 50
+        ? '#f2ea01'
+        : '#806DB6';
+
   return (
     <div>
 
@@ -1102,12 +1091,13 @@ function SafetyCardContent({
           </div>
 
           <span
-            className="pb-1 text-[#806DB6]"
+            className="pb-1"
             style={{
               fontFamily: 'Poppins, sans-serif',
               fontSize: '16px',
               fontWeight: 500,
               lineHeight: 1,
+              color: statusColor,
             }}
           >
             {card.status}
@@ -1146,9 +1136,10 @@ function SafetyCardContent({
         <div className="mt-3 h-[7px] overflow-hidden rounded-full bg-[#D3CEDA]">
 
           <div
-            className="h-full rounded-full bg-[#806DB6] transition-all duration-500"
+            className="h-full rounded-full transition-all duration-500"
             style={{
               width: `${Math.min(Math.max(card.score, 0), 100)}%`,
+              backgroundColor: statusColor,
             }}
           />
 
@@ -1165,6 +1156,7 @@ function SafetyCardContent({
             key={`${activeCardIndex}-${detail.label}`}
             title={detail.label}
             description={detail.value}
+            descriptionColor={statusColor}
             showLine={index < card.details.length - 1}
           />
         ))}
@@ -1181,10 +1173,12 @@ function SafetyCardContent({
 function SafetyDetail({
   title,
   description,
+  descriptionColor,
   showLine = false,
 }: {
   title: string;
   description: string;
+  descriptionColor: string;
   showLine?: boolean;
 }) {
   return (
@@ -1241,12 +1235,13 @@ function SafetyDetail({
         </p>
 
         <p
-          className="mt-[3px] text-[#806DB6]"
+          className="mt-[3px]"
           style={{
             fontFamily: 'Poppins, sans-serif',
             fontSize: '12px',
             fontWeight: 600,
             lineHeight: 1.3,
+            color: descriptionColor,
           }}
         >
           {description}
