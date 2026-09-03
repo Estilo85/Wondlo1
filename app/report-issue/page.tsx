@@ -21,11 +21,11 @@ export default function ReportIssuePage() {
     <div className="min-h-screen flex flex-col bg-[#FAF9FE] text-[#2B2740]">
       <Navbar />
 
-      <main className="flex-grow w-full max-w-2xl mx-auto px-6 py-12">
+      <main className="flex-grow w-full max-w-2xl mx-auto px-3 sm:px-6 py-12">
 
         {/* Outer Section */}
         <div
-          className="w-full rounded-3xl p-8 sm:p-12"
+          className="w-full rounded-3xl p-4 sm:p-12"
           style={{
             backgroundColor: '#F6F4FE',
             border: '0.1px solid rgba(43, 39, 64, 0.10)',
@@ -70,7 +70,7 @@ export default function ReportIssuePage() {
           {/* Submitted State */}
           {submitted ? (
             <div
-              className="mt-8 rounded-2xl bg-white p-8 text-center"
+              className="mt-8 rounded-2xl bg-white p-6 sm:p-8 text-center"
               style={{
                 border:
                   '0.1px solid rgba(43, 39, 64, 0.10)',
@@ -133,7 +133,7 @@ export default function ReportIssuePage() {
             /* Form */
             <form
               onSubmit={handleSubmit}
-              className="mt-8 space-y-6 rounded-2xl bg-[#FAF9FE] p-6 sm:p-8"
+              className="mt-8 space-y-6 rounded-2xl bg-[#FAF9FE] p-4 sm:p-8"
               style={{
                 border:
                   '0.1px solid rgba(43, 39, 64, 0.10)',
