@@ -21,11 +21,11 @@ export default function ReportIssuePage() {
     <div className="min-h-screen flex flex-col bg-[#FAF9FE] text-[#2B2740]">
       <Navbar />
 
-      <main className="flex-grow w-full max-w-2xl mx-auto px-3 sm:px-6 py-12">
+      <main className="flex-grow w-full max-w-2xl mx-auto px-4 sm:px-6 py-12">
 
         {/* Outer Section */}
         <div
-          className="w-full rounded-3xl p-4 sm:p-12"
+          className="w-full rounded-3xl p-6 sm:p-12"
           style={{
             backgroundColor: '#F6F4FE',
             border: '0.1px solid rgba(43, 39, 64, 0.10)',
