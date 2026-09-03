@@ -128,7 +128,7 @@ export default function WhatYouWillReceive() {
             {features.map((item, idx) => (
               <div
                 key={idx}
-                className="flex flex-col rounded-2xl bg-white p-6 transition-transform duration-300 hover:-translate-y-1"
+                className="flex flex-col rounded-2xl bg-[#FCFCFB] p-6 transition-transform duration-300 hover:-translate-y-1"
                 style={{
                   border:
                     '0.1px solid rgba(43, 39, 64, 0.10)',
