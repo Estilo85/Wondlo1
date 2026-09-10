@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import WaitlistModal from './WaitlistModal';
 
 type SafetyCardData = {
@@ -157,10 +158,12 @@ export default function HeroSection({
   operatorName = 'Example Provider',
   ratingText = 'Good',
 }: HeroSectionProps) {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isCardVisible, setIsCardVisible] = useState(true);
+  const [query, setQuery] = useState('');
 
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const [morePopupTop, setMorePopupTop] = useState(0);
@@ -440,6 +443,14 @@ export default function HeroSection({
                   <input
                     type="text"
                     placeholder="Search by company name, website, or social media handle"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (!query.trim()) return;
+                        router.push(`/analyze/results?q=${encodeURIComponent(query.trim())}`);
+                      }
+                    }}
                     className="
                       block
                       h-[42px]
@@ -463,7 +474,11 @@ export default function HeroSection({
                 {/* Analyse button */}
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(true)}
+                  disabled={!query.trim()}
+                  onClick={() => {
+                    if (!query.trim()) return;
+                    router.push(`/analyze/results?q=${encodeURIComponent(query.trim())}`);
+                  }}
                   className="
                     mt-1
                     flex
@@ -479,6 +494,9 @@ export default function HeroSection({
                     text-white
                     transition-colors
                     hover:bg-[#9D85DB]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                    disabled:hover:bg-[#B29DE8]
                     sm:mt-0
                     sm:h-[50px]
                     sm:w-auto
