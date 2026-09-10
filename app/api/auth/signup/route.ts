@@ -52,10 +52,14 @@ export async function POST(req: Request) {
     // Send welcome email with password setup link using Resend
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const setPasswordLink = `${baseUrl}/set-password?email=${encodeURIComponent(email)}`;
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'partnership@joinwondlo.com';
+    const fromName = process.env.RESEND_FROM_NAME || 'Wondlo';
+
+    let emailStatus = 'sent';
 
     try {
       await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'partnership@joinwondlo.com',
+        from: `${fromName} <${fromEmail}>`,
         to: [email],
         subject: 'Welcome to Wondlo - Set Your Password',
         html: `
@@ -69,9 +73,10 @@ export async function POST(req: Request) {
       });
     } catch (emailError: any) {
       console.error('Resend email failed:', emailError);
+      emailStatus = 'failed';
     }
 
-    return NextResponse.json({ success: true, user: newUser }, { status: 200 });
+    return NextResponse.json({ success: true, user: newUser, emailStatus }, { status: 200 });
   } catch (error: any) {
     console.error('Signup route crashed:', error);
     return NextResponse.json(

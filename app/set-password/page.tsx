@@ -4,6 +4,8 @@ import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase-client';
 
 function SetPasswordForm() {
   const searchParams = useSearchParams();
@@ -42,8 +44,17 @@ function SetPasswordForm() {
       }
 
       setSuccess(true);
+
+      if (auth) {
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch {
+          // Session established via /signin if auto sign-in fails
+        }
+      }
+
       setTimeout(() => {
-        router.push('/signin');
+        router.push('/');
       }, 2500);
     } catch (err: any) {
       setError(err.message);
@@ -59,7 +70,7 @@ function SetPasswordForm() {
 
       {success ? (
         <div className="p-4 bg-green-50 text-green-700 text-xs rounded-md">
-          Password set successfully! Redirecting you to sign in...
+          Password set successfully! Redirecting you to the homepage...
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 text-left">

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { FaUserFriends } from 'react-icons/fa';
@@ -28,7 +29,7 @@ export default function SignInPage() {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            window.location.href = 'https://t.me/joinwandlo';
+            window.location.href = '/';
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Invalid credentials.');
             setLoading(false);
@@ -119,7 +120,13 @@ export default function SignInPage() {
                                 text-[#6B7280]
                             "
                         >
-                            Sign in to continue to your account.
+                            Sign in to continue to your account.{' '}
+                            <Link
+                                href="/signup"
+                                className="font-medium text-[#8B6BCB] hover:underline"
+                            >
+                                Don&apos;t have an account? Sign Up
+                            </Link>
                         </p>
 
 

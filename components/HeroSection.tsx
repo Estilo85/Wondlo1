@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import WaitlistModal from './WaitlistModal';
+import { auth } from '@/lib/firebase-client';
 
 type SafetyCardData = {
   score: number;
@@ -226,6 +227,18 @@ export default function HeroSection({
 
   const activeCard = cards[activeCardIndex];
 
+  const performSearch = () => {
+    const q = query.trim();
+    if (!q) return;
+
+    if (!auth?.currentUser) {
+      router.push('/signin');
+      return;
+    }
+
+    router.push(`/analyze/results?q=${encodeURIComponent(q)}`);
+  };
+
   return (
     <>
       <section className="relative overflow-visible bg-white pb-0 sm:pb-8 lg:pb-0">
@@ -447,8 +460,7 @@ export default function HeroSection({
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        if (!query.trim()) return;
-                        router.push(`/analyze/results?q=${encodeURIComponent(query.trim())}`);
+                        performSearch();
                       }
                     }}
                     className="
@@ -476,8 +488,7 @@ export default function HeroSection({
                   type="button"
                   disabled={!query.trim()}
                   onClick={() => {
-                    if (!query.trim()) return;
-                    router.push(`/analyze/results?q=${encodeURIComponent(query.trim())}`);
+                    performSearch();
                   }}
                   className="
                     mt-1

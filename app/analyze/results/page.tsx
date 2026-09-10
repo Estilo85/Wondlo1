@@ -1,234 +1,349 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { OperatorAnalysis } from '@/types/analysis';
+
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { auth } from '@/lib/firebase-client';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 function ResultsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const [authReady, setAuthReady] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const query = searchParams.get('q') || 'Summit Trails Expeditions';
-  const [data, setData] = useState<OperatorAnalysis | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    async function fetchAnalysis() {
-      try {
-        const res = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query })
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Failed to analyze');
-        setData(json);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    if (!auth) {
+      router.replace('/signin');
+      return;
     }
-    fetchAnalysis();
-  }, [query]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#110c1d] text-white flex flex-col items-center justify-center font-sans">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-purple-500 mb-4"></div>
-        <p className="text-purple-300 text-sm">Scraping hashtags & calculating safety framework scores for {query}...</p>
-      </div>
-    );
-  }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        router.replace('/signin');
+      } else {
+        setUser(firebaseUser);
+        setAuthReady(true);
+      }
+    });
 
-  if (error || !data) {
+    return () => unsubscribe();
+  }, [router]);
+
+  const userInitial = user?.displayName?.trim()
+    ? user.displayName.trim().charAt(0).toUpperCase()
+    : (user?.email?.charAt(0).toUpperCase() ?? 'U');
+
+  const signOut = () => {
+    if (auth) {
+      auth.signOut();
+    }
+    router.push('/');
+  };
+
+  if (!authReady) {
     return (
-      <div className="min-h-screen bg-[#110c1d] text-white flex flex-col items-center justify-center p-6">
-        <p className="text-red-400 mb-4">Error: {error || 'Could not load analysis data'}</p>
-        <Link href="/" className="px-4 py-2 bg-purple-600 rounded-lg text-sm font-medium">Return Home</Link>
+      <div className="min-h-screen bg-[#FAF9FE] flex items-center justify-center text-sm text-[#7E6BB3]">
+        Loading safety analysis...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#110c1d] text-white font-sans selection:bg-purple-500 selection:text-white pb-16">
-      
-      <header className="border-b border-purple-950 px-6 py-4 flex justify-between items-center max-w-6xl mx-auto text-sm">
-        <div className="flex items-center gap-6">
-          <span className="font-bold text-lg tracking-wide">Wondlo</span>
-          <Link href="/" className="text-purple-400 hover:text-white transition">HOME</Link>
-          <span className="text-purple-500 font-medium">COMMUNITY</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/" className="bg-[#24193b] border border-purple-800/60 px-4 py-1.5 rounded-full text-purple-200 text-xs flex items-center gap-2 hover:bg-[#2d204a] transition">
-            <span>🔍 Analyse Another Adventure</span>
+    <div className="min-h-screen bg-[#FAF9FE] text-[#2B2740] font-inter">
+      {/* Top Navbar */}
+      <header className="bg-white border-b border-[#EDE7FB] sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link href="/" className="font-poppins font-semibold text-xl text-[#7E6BB3] tracking-tight">
+            Wondlo
           </Link>
-          <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs shadow">U</div>
+
+          <div className="flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-6 text-xs font-semibold tracking-wider uppercase text-[#6B6380]">
+              <Link href="/" className="hover:text-[#7E6BB3] transition-colors">Home</Link>
+              <Link href="/community" className="hover:text-[#7E6BB3] transition-colors">Community</Link>
+            </nav>
+
+            <button
+              onClick={() => router.push('/')}
+              className="bg-[#B29DE8] hover:bg-[#9D85DB] text-white font-poppins font-semibold text-xs px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <span>Analyze Another Adventure</span>
+              <span>→</span>
+            </button>
+
+            <div className="flex items-center gap-2 pl-4 border-l border-[#EDE7FB]">
+              <div className="hidden sm:block text-right">
+                <p className="text-xs font-semibold text-[#2B2740] leading-tight">
+                  {user?.displayName || 'User'}
+                </p>
+                <button
+                  onClick={signOut}
+                  className="text-[10px] text-[#7E6BB3] hover:underline cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
+              <div
+                onClick={signOut}
+                title={user?.displayName ? `Sign out ${user.displayName}` : 'Sign out'}
+                className="w-8 h-8 rounded-full bg-[#EDE7FB] border border-[#C7B5F5] flex items-center justify-center text-[#7E6BB3] font-poppins font-bold text-xs cursor-pointer hover:bg-[#E2DBF7] transition-colors"
+              >
+                {userInitial}
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 pt-6 space-y-6">
-        
-        <div className="flex justify-between items-center text-xs text-purple-400">
-          <Link href="/" className="hover:text-white transition">← Back to Search</Link>
-          <div className="flex gap-4">
-            <span>Assessment Version: v1.3</span>
-            <span>Generated: {data.reportGeneratedDate}</span>
-          </div>
-        </div>
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-        <div className="bg-[#1b142d] border border-purple-900/40 p-6 rounded-2xl flex flex-col md:flex-row justify-between gap-6 shadow-xl">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-purple-950 border border-purple-800 flex items-center justify-center text-lg">⛰️</div>
-              <h1 className="text-xl md:text-2xl font-bold">{data.operatorName}</h1>
-              {data.verified && <span className="text-blue-400 text-base" title="Verified Operator">✔</span>}
-            </div>
-            <div className="flex items-center gap-4 text-xs text-purple-300 pt-1">
-              <span>📍 {data.location}</span>
-              <span>🧗 {data.activityType}</span>
-            </div>
-            <div className="flex flex-wrap gap-4 pt-3 text-[11px] text-purple-400 font-mono">
-              <span className="bg-[#140e24] px-3 py-1 rounded-md border border-purple-950">📅 Report Generated: {data.reportGeneratedDate}</span>
-              <span className="bg-[#140e24] px-3 py-1 rounded-md border border-purple-950">📊 Data Collected Up To: {data.dataCollectedUpTo}</span>
-            </div>
-          </div>
+        {/* Back Link */}
+        <button
+          onClick={() => router.back()}
+          className="text-xs font-poppins font-semibold text-[#7E6BB3] hover:underline flex items-center gap-1 cursor-pointer"
+        >
+          <span>←</span> Back to Search
+        </button>
 
-          <div className="flex gap-3 overflow-x-auto">
-            {data.images.map((imgUrl, i) => (
-              <div key={i} className="w-32 h-20 rounded-xl overflow-hidden border border-purple-800/40 bg-purple-950 flex-shrink-0 shadow-inner">
-                <img src={imgUrl} alt="Adventure preview" className="w-full h-full object-cover" />
+        {/* Provider Hero Card */}
+        <div className="bg-white rounded-2xl border border-[#EDE7FB] p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#EDE7FB] border border-[#C7B5F5] flex items-center justify-center text-[#7E6BB3] font-bold text-lg">
+                  🏔️
+                </div>
+                <div>
+                  <h1 className="font-poppins font-bold text-2xl sm:text-3xl text-[#2B2740]">
+                    {query}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-[#6B6380] mt-1">
+                    <span className="flex items-center gap-1">📍 Nepal</span>
+                    <span className="flex items-center gap-1">🧗‍♂️ Adventure Trekking, Climbing</span>
+                  </div>
+                </div>
               </div>
-            ))}
+
+              <div className="flex flex-wrap items-center gap-4 text-[11px] text-[#8F8998] pt-2 border-t border-[#F6F4FE]">
+                <span className="bg-[#F6F4FE] px-2.5 py-1 rounded-md border border-[#EDE7FB]">
+                  🗓️ Report Generated: <strong className="text-[#2B2740]">July 15, 2026</strong>
+                </span>
+                <span className="bg-[#F6F4FE] px-2.5 py-1 rounded-md border border-[#EDE7FB]">
+                  🔄 Data Covered Up to: <strong className="text-[#2B2740]">July 14, 2026</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Thumbnail Gallery */}
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 lg:pb-0">
+              <div className="w-32 h-20 rounded-xl bg-gray-100 relative overflow-hidden border border-[#EDE7FB] flex-shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2">
+                  <span className="text-[10px] text-white font-medium truncate">Expedition Base</span>
+                </div>
+              </div>
+              <div className="w-32 h-20 rounded-xl bg-gray-100 relative overflow-hidden border border-[#EDE7FB] flex-shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2">
+                  <span className="text-[10px] text-white font-medium truncate">Summit Ridge</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-[#1b142d] border border-purple-900/40 p-6 rounded-2xl shadow-lg">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-purple-400 uppercase tracking-wider font-medium">Overall Safety Score</span>
-              <span className="text-purple-400 text-xs cursor-help" title="Weighted score across 7 dimensions">ⓘ</span>
+        {/* Scores Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+          {/* Overall Safety Score */}
+          <div className="md:col-span-7 bg-white rounded-2xl border border-[#EDE7FB] p-6 sm:p-8 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="font-poppins font-semibold text-sm text-[#6B6380]">Overall Safety Score</span>
+              <span className="bg-[#EBFADF] text-[#3D8A1E] border border-[#D4F5BE] text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
+                Low Risk
+              </span>
             </div>
-            <div className="flex items-baseline gap-4 mt-2">
-              <span className="text-4xl md:text-5xl font-ext500 font-bold">{data.overallSafetyScore} / 100</span>
-              <span className="px-3 py-1 bg-[#281c42] text-purple-200 text-xs rounded-full border border-purple-800/80">{data.riskLevel}</span>
+            <div className="my-6 flex items-baseline gap-3">
+              <span className="font-poppins font-bold text-5xl sm:text-6xl text-[#2B2740]">85</span>
+              <span className="font-poppins font-semibold text-lg text-[#8F8998]">/ 100</span>
             </div>
-            <div className="w-full bg-[#140e24] h-2 rounded-full mt-5 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-1000" style={{ width: `${data.overallSafetyScore}%` }} />
+            <div className="w-full bg-[#F6F4FE] rounded-full h-3 overflow-hidden border border-[#EDE7FB]">
+              <div className="bg-[#7E6BB3] h-full rounded-full" style={{ width: '85%' }}></div>
             </div>
           </div>
 
-          <div className="bg-[#1b142d] border border-purple-900/40 p-6 rounded-2xl shadow-lg">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-purple-400 uppercase tracking-wider font-medium">Confidence</span>
-              <span className="text-purple-400 text-xs cursor-help" title="Model confidence rating">ⓘ</span>
+          {/* Confidence Score */}
+          <div className="md:col-span-5 bg-white rounded-2xl border border-[#EDE7FB] p-6 sm:p-8 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="font-poppins font-semibold text-sm text-[#6B6380]">Confidence</span>
+              <span className="w-8 h-8 rounded-full bg-[#EDE7FB] border border-[#C7B5F5] flex items-center justify-center text-xs">🛡️</span>
             </div>
-            <div className="flex items-center gap-3 mt-2">
-              <div className="p-2 bg-purple-950 rounded-lg text-purple-300 border border-purple-800/50">🛡️</div>
-              <span className="text-4xl md:text-5xl font-bold">{data.confidenceScore}%</span>
+            <div className="my-6 flex items-baseline gap-2">
+              <span className="font-poppins font-bold text-4xl sm:text-5xl text-[#2B2740]">90%</span>
             </div>
-            <p className="text-xs text-purple-300 mt-4 leading-relaxed">This operator satisfies our trained model's 7 required dimensions for safety.</p>
+            <p className="text-xs text-[#6B6380] leading-relaxed">
+              This operator satisfies our trained model&apos;s 7 required dimensions for safety.
+            </p>
           </div>
+
         </div>
 
-        <div className="bg-[#1b142d] border border-purple-900/40 p-6 rounded-2xl shadow-lg">
-          <h2 className="text-sm font-semibold mb-2 flex items-center gap-1.5 text-purple-200">
-            Safety Summary <span className="text-purple-400">✦</span>
+        {/* Safety Summary */}
+        <div className="bg-white rounded-2xl border border-[#EDE7FB] p-6 sm:p-8 shadow-sm space-y-4">
+          <h2 className="font-poppins font-semibold text-base text-[#2B2740] flex items-center gap-2">
+            <span>Safety Summary</span>
+            <span className="text-xs text-[#7E6BB3]">✨</span>
           </h2>
-          <p className="text-purple-200 text-xs md:text-sm leading-relaxed">{data.summary}</p>
-          
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-purple-950">
-            {Object.keys(data.dimensions).map((dim) => (
-              <span key={dim} className="text-[11px] bg-[#140e24] border border-purple-900/60 text-purple-300 px-2.5 py-1 rounded-md flex items-center gap-1">
-                <span>⚠️</span> <span className="capitalize">{dim.replace(/([A-Z])/g, ' $1')}</span>
+          <p className="text-xs sm:text-sm text-[#6B6380] leading-relaxed">
+            {query} demonstrates strong safety practices overall. Guides are well-qualified and emergency protocols are in place. We found no major incidents in the past 3 years. Some traveller feedback mention equipment maintenance inconsistencies on certain trips.
+          </p>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            {['Quality of Experience', 'Incident History', 'Safety Sentiment', 'Quality of Regulation', 'Business Information', 'Equipment Assessment', 'Risk Assessment'].map((tag, idx) => (
+              <span key={idx} className="bg-[#F6F4FE] hover:bg-[#EDE7FB] text-[#7E6BB3] border border-[#E4D7FA] text-[11px] font-medium px-3 py-1 rounded-full transition-colors cursor-pointer">
+                ✓ {tag}
               </span>
             ))}
           </div>
         </div>
 
-        <div className="bg-[#1b142d] border border-purple-900/40 p-6 rounded-2xl shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-sm font-semibold text-purple-200">Risk Breakdown</h2>
-            <button className="text-xs text-purple-400 hover:text-white transition">View full breakdown →</button>
+        {/* Risk Breakdown */}
+        <div className="bg-white rounded-2xl border border-[#EDE7FB] p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-poppins font-semibold text-base text-[#2B2740]">Risk Breakdown</h2>
+            <button className="text-xs font-semibold text-[#7E6BB3] hover:underline">View full assessment →</button>
           </div>
 
           <div className="space-y-4">
-            {Object.entries(data.dimensions).map(([key, score]) => (
-              <div key={key} className="flex items-center justify-between text-xs">
-                <div className="w-48 text-purple-300 capitalize flex items-center gap-2">
-                  <span className="text-[10px] text-purple-500">🛡️</span>
-                  <span>{key.replace(/([A-Z])/g, ' $1')}</span>
+            {[
+              { name: 'Quality of Experience', score: 90, status: 'purple' },
+              { name: 'Quality of Regulation', score: 78, status: 'purple' },
+              { name: 'Incident History', score: 82, status: 'purple' },
+              { name: 'Business Information', score: 80, status: 'purple' },
+              { name: 'Risk Assessment', score: 85, status: 'purple' },
+              { name: 'Equipment Assessment', score: 65, status: 'yellow' },
+              { name: 'Safety Sentiment', score: 77, status: 'purple' },
+            ].map((item, idx) => (
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 items-center gap-4 text-xs">
+                <div className="sm:col-span-4 font-medium text-[#2B2740] flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#7E6BB3]"></span>
+                  {item.name}
                 </div>
-                <div className="flex-1 mx-6 bg-[#140e24] h-2 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full ${score < 70 ? 'bg-amber-500' : 'bg-purple-500'}`} 
-                    style={{ width: `${score}%` }} 
-                  />
+                <div className="sm:col-span-7">
+                  <div className="w-full bg-[#F6F4FE] rounded-full h-2.5 overflow-hidden border border-[#EDE7FB]">
+                    <div
+                      className={`h-full rounded-full ${item.status === 'yellow' ? 'bg-[#E5A93B]' : 'bg-[#7E6BB3]'}`}
+                      style={{ width: `${item.score}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="w-16 text-right font-mono font-medium text-purple-200">
-                  {score} <span className="text-purple-500">/ 100 ⓘ</span>
+                <div className="sm:col-span-1 text-right font-semibold text-[#2B2740]">
+                  {item.score} / 100
                 </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-purple-400 mt-5">ⓘ Hover over a category to see what it includes</p>
-        </div>
-
-        <div className="bg-[#1b142d] border border-purple-900/40 p-6 rounded-2xl shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-sm font-semibold text-purple-200">Incident Timeline</h2>
-            <button className="text-xs text-purple-400 hover:text-white transition">View full incident history →</button>
-          </div>
-
-          <div className="space-y-6 border-l-2 border-purple-900/80 ml-3 pl-6 relative">
-            {data.incidents.map((incident, idx) => (
-              <div key={idx} className="relative space-y-1">
-                <div className={`absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full border-2 border-[#1b142d] ${incident.severity === 'Moderate' ? 'bg-amber-500' : incident.severity === 'Minor' ? 'bg-purple-400' : 'bg-purple-600'}`} />
-                <div className="text-[11px] text-purple-400 font-mono">{incident.date} • <span className="capitalize">{incident.severity}</span></div>
-                <h3 className="font-semibold text-white text-xs md:text-sm">{incident.title}</h3>
-                <p className="text-xs text-purple-300 leading-relaxed">{incident.description}</p>
-                <span className="text-[10px] text-purple-400 block pt-1">Source: {incident.source}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-[#1b142d] border border-purple-900/40 p-5 rounded-2xl shadow">
-          <h3 className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">Assessment</h3>
-          <p className="text-xs text-purple-200">{data.assessmentConclusion}</p>
-        </div>
+        {/* Incident Timeline */}
+        <div className="bg-white rounded-2xl border border-[#EDE7FB] p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-poppins font-semibold text-base text-[#2B2740]">Incident Timeline</h2>
+            <button className="text-xs font-semibold text-[#7E6BB3] hover:underline">View full incidents →</button>
+          </div>
 
-        <div className="bg-[#1b142d] border border-purple-900/40 p-6 rounded-2xl shadow-lg">
-          <h3 className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">Recommended Documents To Request</h3>
-          <p className="text-[11px] text-purple-300 mb-4">Requesting these documents can help verify the operator's safety practices.</p>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            {['Safety Plan', 'Equipment Inspection Records', 'Emergency Response Plan', 'Insurance', 'Permits & Authorizations'].map((doc, i) => (
-              <div key={i} className="bg-[#140e24] border border-purple-900/50 p-3 rounded-xl flex flex-col items-center text-center gap-2 hover:border-purple-700 transition cursor-pointer">
-                <span className="text-lg">📄</span>
-                <span className="text-[11px] text-purple-200 font-medium leading-tight">{doc}</span>
+          <div className="space-y-6 relative before:absolute before:inset-0 before:left-3 before:w-0.5 before:bg-[#EDE7FB]">
+            <div className="relative flex items-start gap-4 pl-8">
+              <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-[#7E6BB3] ring-4 ring-[#FAF9FE]"></div>
+              <div>
+                <span className="text-[10px] font-semibold text-[#8F8998] uppercase">Apr 12, 2025 • Minor</span>
+                <p className="font-poppins font-semibold text-sm text-[#2B2740] mt-0.5">Mild altitude sickness reported</p>
+                <p className="text-xs text-[#6B6380] mt-1">Trekking group experienced mild altitude sickness. Managed on site, no evacuation required.</p>
+                <span className="inline-block mt-2 text-[10px] font-medium text-[#7E6BB3] bg-[#F6F4FE] px-2 py-0.5 rounded border border-[#EDE7FB]">Source: Instagram</span>
               </div>
-            ))}
+            </div>
+
+            <div className="relative flex items-start gap-4 pl-8">
+              <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-[#3D8A1E] ring-4 ring-[#FAF9FE]"></div>
+              <div>
+                <span className="text-[10px] font-semibold text-[#8F8998] uppercase">Oct 3, 2023 • None</span>
+                <p className="font-poppins font-semibold text-sm text-[#2B2740] mt-0.5">No incidents reported</p>
+                <p className="text-xs text-[#6B6380] mt-1">No safety incidents found during this period.</p>
+                <span className="inline-block mt-2 text-[10px] font-medium text-[#7E6BB3] bg-[#F6F4FE] px-2 py-0.5 rounded border border-[#EDE7FB]">Source: Company Website</span>
+              </div>
+            </div>
+
+            <div className="relative flex items-start gap-4 pl-8">
+              <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-[#E5A93B] ring-4 ring-[#FAF9FE]"></div>
+              <div>
+                <span className="text-[10px] font-semibold text-[#8F8998] uppercase">May 21, 2021 • Moderate</span>
+                <p className="font-poppins font-semibold text-sm text-[#2B2740] mt-0.5">Rescue delayed due to weather</p>
+                <p className="text-xs text-[#6B6380] mt-1">Bad weather delayed rescue response by approximately 2 hours. No injuries were reported.</p>
+                <span className="inline-block mt-2 text-[10px] font-medium text-[#7E6BB3] bg-[#F6F4FE] px-2 py-0.5 rounded border border-[#EDE7FB]">Source: News Article</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-[#24193b] border border-purple-800/60 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
-          <button className="flex-1 min-w-[140px] bg-[#1b142d] hover:bg-[#140e24] border border-purple-700/60 text-purple-200 py-2.5 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition shadow">
-            <span>🛡️</span> REPORT A BUG
-          </button>
-          <button className="flex-1 min-w-[140px] bg-[#1b142d] hover:bg-[#140e24] border border-purple-700/60 text-purple-200 py-2.5 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition shadow">
-            <span>💡</span> REQUEST A FEATURE
-          </button>
-          <button className="flex-1 min-w-[140px] bg-[#1b142d] hover:bg-[#140e24] border border-purple-700/60 text-purple-200 py-2.5 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition shadow">
-            <span>❓</span> REQUEST SAFETY HELP
-          </button>
-          <button className="flex-1 min-w-[160px] bg-[#1b142d] hover:bg-[#140e24] border border-purple-700/60 text-purple-200 py-2.5 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition shadow">
-            <span>📥</span> DOWNLOAD RECOMMENDED QUESTIONS
-          </button>
+        {/* Assessment & Documents Grid */}
+        <div className="bg-white rounded-2xl border border-[#EDE7FB] p-6 sm:p-8 shadow-sm space-y-6">
+          <div>
+            <h2 className="font-poppins font-semibold text-base text-[#2B2740]">Assessment</h2>
+            <p className="text-xs sm:text-sm text-[#6B6380] mt-1">
+              The operator satisfies our safety framework for (trip-type) safety.
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-[#F6F4FE]">
+            <p className="text-xs font-semibold text-[#2B2740] uppercase tracking-wider mb-4">
+              Recommended Documents To Request
+            </p>
+            <p className="text-xs text-[#6B6380] mb-4">
+              Requesting these documents can help verify the operator&apos;s safety practices.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {[
+                { title: 'Safety Plan', icon: '📄' },
+                { title: 'Equipment Inspection Records', icon: '🛡️' },
+                { title: 'Emergency Response Plan', icon: '📋' },
+                { title: 'Insurance', icon: '🛡️' },
+                { title: 'Permits & Authorizations', icon: '📜' },
+              ].map((doc, idx) => (
+                <div key={idx} className="bg-[#F6F4FE] border border-[#EDE7FB] rounded-xl p-4 text-center space-y-2 hover:bg-[#EDE7FB]/50 transition-colors">
+                  <div className="text-xl">{doc.icon}</div>
+                  <span className="text-[11px] font-medium text-[#2B2740] block">{doc.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="text-center text-[11px] text-purple-400 space-y-1 pt-4 pb-8">
-          <p>All-inclusive safety assessments issued in good faith. Available information via social support — official travel safety advisories.</p>
-          <p>Safety as a System® • Copyright © Wondlo 2026.</p>
+        {/* Actions Footer Banner */}
+        <div className="bg-[#7E6BB3] rounded-2xl p-6 sm:p-8 text-white space-y-6 shadow-lg">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h2 className="font-poppins font-semibold text-base">Actions</h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <button className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl py-3 px-4 text-xs font-semibold font-poppins transition-colors flex items-center justify-center gap-2 cursor-pointer">
+              <span>🐛</span> REPORT A BUG
+            </button>
+            <button className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl py-3 px-4 text-xs font-semibold font-poppins transition-colors flex items-center justify-center gap-2 cursor-pointer">
+              <span>💡</span> REQUEST A FEATURE
+            </button>
+            <button className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl py-3 px-4 text-xs font-semibold font-poppins transition-colors flex items-center justify-center gap-2 cursor-pointer">
+              <span>🛟</span> REQUEST SAFETY HELP
+            </button>
+            <button className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl py-3 px-4 text-xs font-semibold font-poppins transition-colors flex items-center justify-center gap-2 cursor-pointer">
+              <span>📥</span> DOWNLOAD RECOMMENDED QUESTIONS
+            </button>
+          </div>
+
+          <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-[11px] text-white/70 gap-2">
+            <p>All adventure safety scores are generated using our public records & AI safety analysis framework.</p>
+            <p>Safety v1.1 • Wondlo © 2026</p>
+          </div>
         </div>
 
       </main>
@@ -238,7 +353,7 @@ function ResultsContent() {
 
 export default function AnalysisResultsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#110c1d] text-white flex items-center justify-center text-sm">Loading analysis engine...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#FAF9FE] flex items-center justify-center text-sm text-[#7E6BB3]">Loading safety analysis...</div>}>
       <ResultsContent />
     </Suspense>
   );

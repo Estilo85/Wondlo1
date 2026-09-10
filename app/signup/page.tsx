@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { FaUserFriends } from 'react-icons/fa';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,6 +37,11 @@ export default function SignupPage() {
       }
 
       setSuccessMessage(true);
+
+      // Redirect to sign in after showing the success confirmation briefly
+      setTimeout(() => {
+        router.push('/signin');
+      }, 3500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
