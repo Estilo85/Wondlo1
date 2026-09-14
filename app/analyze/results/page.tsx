@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/lib/firebase-client';
 import { onAuthStateChanged } from 'firebase/auth';
+import { FaBug, FaTools } from 'react-icons/fa';
 
 const sectionStyle = {
   background: '#F6F4FE',
@@ -330,7 +331,7 @@ function ResultsContent() {
               </svg>
             </button>
 
-            <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6 pr-0 sm:pr-8">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 pr-0 sm:pr-4">
               <div className="flex flex-col sm:flex-row items-start gap-5 sm:gap-8 min-w-0">
                 <div
                   className="w-[110px] h-[110px] sm:w-[150px] sm:h-[150px] flex-shrink-0 rounded-xl flex items-center justify-center"
@@ -546,8 +547,8 @@ function ResultsContent() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-stretch gap-4 xl:pt-1 w-full xl:w-auto">
-                <div className="relative w-full sm:w-[280px] xl:w-[280px] h-[150px] sm:h-[120px] rounded-xl overflow-hidden">
+              <div className="flex flex-row items-stretch gap-4 lg:pt-9 w-full lg:w-auto">
+                <div className="relative w-1/2 min-w-0 sm:w-[280px] lg:w-[240px] xl:w-[280px] h-[150px] sm:h-[120px] rounded-xl overflow-hidden">
                   <Image
                     src="/images/hiking.jpg"
                     alt="Expedition Base"
@@ -557,7 +558,7 @@ function ResultsContent() {
                   />
                 </div>
 
-                <div className="relative w-full sm:w-[280px] xl:w-[280px] h-[150px] sm:h-[120px] rounded-xl overflow-hidden">
+                <div className="relative w-1/2 min-w-0 sm:w-[280px] lg:w-[240px] xl:w-[280px] h-[150px] sm:h-[120px] rounded-xl overflow-hidden">
                   <Image
                     src="/images/snowboarding.jpg"
                     alt="Summit Ridge"
@@ -1513,39 +1514,23 @@ function ResultsContent() {
               Actions
             </h2>
 
-            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
               <button
+                type="button"
+                onClick={() => router.push('/report-issue')}
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
-                <svg
-                  width="25"
-                  height="25"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#2B2740"
-                  strokeWidth="1.5"
-                >
-                  <circle cx="12" cy="12" r="8" />
-                  <path d="M8 8l8 8M16 8l-8 8" />
-                </svg>
+                <FaBug size={25} color="#2B2740" />
 
                 REPORT A BUG
               </button>
 
               <button
+                type="button"
+                onClick={() => router.push('/report-issue?type=feature')}
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
-                <svg
-                  width="25"
-                  height="25"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#2B2740"
-                  strokeWidth="1.5"
-                >
-                  <path d="M5 5h14v14H5z" />
-                  <path d="M8 8l8 8M16 8l-8 8" />
-                </svg>
+                <FaTools size={25} color="#2B2740" />
 
                 REQUEST A FEATURE
               </button>
