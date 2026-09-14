@@ -199,22 +199,22 @@ function ResultsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F4FE] text-[#2B2740] font-poppins antialiased">
+    <div className="min-h-screen bg-[#F6F4FE] text-[#2B2740] font-poppins antialiased overflow-x-hidden">
       {/* ================================================================
           NAVIGATION
       ================================================================= */}
 
       <header className="sticky top-0 z-40 bg-white border-b border-[#EDE7FB]">
-        <div className="w-full max-w-[1316px] mx-auto px-6 xl:px-0">
-          <div className="h-16 flex items-center justify-between">
+        <div className="w-full max-w-[1316px] mx-auto px-4 sm:px-6 xl:px-0">
+          <div className="min-h-16 py-3 flex items-center justify-between gap-3">
             <Link
               href="/"
-              className="font-bold text-lg text-[#2B2740] tracking-tight"
+              className="font-bold text-lg text-[#2B2740] tracking-tight flex-shrink-0"
             >
               Wondlo
             </Link>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <nav className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-wide text-[#2B2740]">
                 <Link
                   href="/"
@@ -233,7 +233,7 @@ function ResultsContent() {
 
               <button
                 onClick={() => router.push('/')}
-                className="h-8 px-4 rounded-lg bg-[#7E6BB3] text-white border border-[#7E6BB3] flex items-center gap-2 text-xs font-semibold transition-opacity hover:opacity-90 cursor-pointer"
+                className="h-8 px-3 sm:px-4 rounded-lg bg-[#7E6BB3] text-white border border-[#7E6BB3] flex items-center gap-2 text-xs font-semibold transition-opacity hover:opacity-90 cursor-pointer whitespace-nowrap"
               >
                 <svg
                   className="w-4 h-4"
@@ -249,12 +249,16 @@ function ResultsContent() {
                   />
                 </svg>
 
-                <span>Analyse Another Adventure</span>
+                <span className="hidden sm:inline">
+                  Analyse Another Adventure
+                </span>
+
+                <span className="sm:hidden">Analyse Another</span>
 
                 <span className="text-sm">→</span>
               </button>
 
-              <div className="relative w-9 h-9 rounded-full bg-[#F6F4FE] border border-[#C7B5F5] flex items-center justify-center text-[#7E6BB3]">
+              <div className="relative w-9 h-9 rounded-full bg-[#F6F4FE] border border-[#C7B5F5] flex items-center justify-center text-[#7E6BB3] flex-shrink-0">
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -275,9 +279,8 @@ function ResultsContent() {
           </div>
         </div>
 
-        {/* Back to Search row — same background as dashboard sections */}
         <div className="w-full bg-[#F6F4FE] border-t border-[#EDE7FB]">
-          <div className="w-full max-w-[1316px] mx-auto px-6 xl:px-0 h-10 flex items-center justify-between">
+          <div className="w-full max-w-[1316px] mx-auto px-4 sm:px-6 xl:px-0 min-h-10 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <button
               onClick={() => router.back()}
               className="text-xs font-semibold text-[#7E6BB3] hover:underline flex items-center gap-2 cursor-pointer"
@@ -289,30 +292,25 @@ function ResultsContent() {
               Back to Search
             </button>
 
-            <div className="flex items-center gap-3 text-xs text-[#2B2740]">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-[#2B2740]">
               <span>Assessment Version: v1.1</span>
-              <span className="text-[#9AA0A6]">|</span>
+              <span className="hidden sm:inline text-[#9AA0A6]">|</span>
               <span>Generated: {generatedDate}</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* ================================================================
-          DASHBOARD
-      ================================================================= */}
-
       <main className="w-full">
         {/* ================================================================
             PROFILE
         ================================================================= */}
 
-        <section className="w-full py-3">
+        <section className="w-full px-3 sm:px-0 py-2 sm:py-3">
           <div
-            className="relative w-full max-w-[1316px] min-h-[250px] mx-auto rounded-xl p-6 xl:p-7"
+            className="relative w-full max-w-[1316px] min-h-[250px] mx-auto rounded-xl p-4 sm:p-6 xl:p-7"
             style={sectionStyle}
           >
-            {/* Sidebar / profile action button from Figma */}
             <button
               type="button"
               aria-label="Open profile sidebar"
@@ -332,11 +330,10 @@ function ResultsContent() {
               </svg>
             </button>
 
-            <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6 pr-8">
-              <div className="flex items-start gap-8">
-                {/* Profile placeholder */}
+            <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6 pr-0 sm:pr-8">
+              <div className="flex flex-col sm:flex-row items-start gap-5 sm:gap-8 min-w-0">
                 <div
-                  className="w-[150px] h-[150px] flex-shrink-0 rounded-xl flex items-center justify-center"
+                  className="w-[110px] h-[110px] sm:w-[150px] sm:h-[150px] flex-shrink-0 rounded-xl flex items-center justify-center"
                   style={{
                     background: '#F6F4FE',
                     border: '0.15px solid rgba(43, 39, 64, 0.10)',
@@ -347,11 +344,9 @@ function ResultsContent() {
                     height="100"
                     viewBox="0 0 100 100"
                     fill="none"
+                    className="w-[75px] h-[75px] sm:w-[100px] sm:h-[100px]"
                   >
-                    <path
-                      d="M50 8L91 82H9L50 8Z"
-                      fill="#454545"
-                    />
+                    <path d="M50 8L91 82H9L50 8Z" fill="#454545" />
                     <path
                       d="M30 52L43 35L54 51L63 40L82 70H18L30 52Z"
                       fill="#F6F4FE"
@@ -365,9 +360,9 @@ function ResultsContent() {
                   </svg>
                 </div>
 
-                <div className="pt-1">
-                  <div className="flex items-center gap-2">
-                    <h1 className="font-poppins text-[24px] leading-[30px] font-bold text-[#000000]">
+                <div className="pt-1 min-w-0 w-full">
+                  <div className="flex items-start gap-2 min-w-0 pr-8">
+                    <h1 className="font-poppins text-[21px] sm:text-[24px] leading-[27px] sm:leading-[30px] font-bold text-[#000000] break-words">
                       {query}
                     </h1>
 
@@ -375,10 +370,11 @@ function ResultsContent() {
                       width="18"
                       height="18"
                       viewBox="0 0 24 24"
+                      className="flex-shrink-0 mt-1"
                     >
                       <path
                         fill="#1877F2"
-                        d="M12 1.5 15.06 4.61 19.43 4.58 19.39 8.94 22.5 12 19.39 15.06 19.43 19.43 15.06 19.39 12 22.5 8.94 19.39 4.58 19.43 4.61 15.06 1.5 12 4.61 8.94 4.58 4.58 8.94 4.61 12 1.5Z"
+                        d="M12 1.5 15.06 4.61 19.43 4.58 19.39 8.94 22.5 12 19.39 15.06 19.43 19.39 15.06 19.39 12 22.5 8.94 19.39 4.58 19.43 4.61 15.06 1.5 12 4.61 8.94 4.58 4.58 8.94 4.61 12 1.5Z"
                       />
 
                       <path
@@ -392,8 +388,8 @@ function ResultsContent() {
                     </svg>
                   </div>
 
-                  <div className="mt-6 flex flex-col gap-5">
-                    <div className="flex items-center gap-4">
+                  <div className="mt-5 sm:mt-6 flex flex-col gap-4 sm:gap-5">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       <svg
                         width="30"
                         height="30"
@@ -401,6 +397,7 @@ function ResultsContent() {
                         fill="none"
                         stroke="#000000"
                         strokeWidth="1.8"
+                        className="flex-shrink-0"
                       >
                         <path
                           strokeLinecap="round"
@@ -410,12 +407,12 @@ function ResultsContent() {
                         <circle cx="12" cy="10" r="2.5" />
                       </svg>
 
-                      <span className="text-[18px] leading-[22px] font-poppins font-semibold text-[#000000]">
+                      <span className="text-[16px] sm:text-[18px] leading-[20px] sm:leading-[22px] font-poppins font-semibold text-[#000000]">
                         Nepal
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-start gap-3 sm:gap-4">
                       <svg
                         width="30"
                         height="30"
@@ -425,6 +422,7 @@ function ResultsContent() {
                         strokeWidth="1.8"
                         strokeLinecap="round"
                         strokeLinejoin="round"
+                        className="flex-shrink-0"
                       >
                         <path d="M5 20 19 4" />
                         <circle
@@ -454,15 +452,15 @@ function ResultsContent() {
                         <path d="M12.6 15.7 15.4 18.8 14.2 20" />
                       </svg>
 
-                      <span className="text-[18px] leading-[22px] font-poppins font-semibold text-[#000000]">
+                      <span className="text-[16px] sm:text-[18px] leading-[20px] sm:leading-[22px] font-poppins font-semibold text-[#000000]">
                         Adventure Trekking, Climbing
                       </span>
                     </div>
                   </div>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-4">
+                  <div className="mt-5 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
                     <div
-                      className="h-[40px] px-4 rounded-lg flex items-center gap-3"
+                      className="min-h-[40px] px-4 py-2 rounded-lg flex items-center gap-3"
                       style={{
                         background: '#F6F4FE',
                         border: '0.15px solid rgba(43, 39, 64, 0.10)',
@@ -475,6 +473,7 @@ function ResultsContent() {
                         fill="none"
                         stroke="#000000"
                         strokeWidth="1.8"
+                        className="flex-shrink-0"
                       >
                         <rect
                           x="3"
@@ -502,18 +501,18 @@ function ResultsContent() {
                       </svg>
 
                       <span className="flex flex-col leading-tight font-inter">
-                        <span className="text-[16px] font-extralight text-[#000000]">
+                        <span className="text-[14px] sm:text-[16px] font-extralight text-[#000000]">
                           Report Generated
                         </span>
 
-                        <strong className="text-[16px] font-medium text-[#000000]">
+                        <strong className="text-[14px] sm:text-[16px] font-medium text-[#000000]">
                           July 15 2026
                         </strong>
                       </span>
                     </div>
 
                     <div
-                      className="h-[40px] px-4 rounded-lg flex items-center gap-3"
+                      className="min-h-[40px] px-4 py-2 rounded-lg flex items-center gap-3"
                       style={{
                         background: '#F6F4FE',
                         border: '0.15px solid rgba(43, 39, 64, 0.10)',
@@ -528,16 +527,17 @@ function ResultsContent() {
                         strokeWidth="1.8"
                         strokeLinecap="round"
                         strokeLinejoin="round"
+                        className="flex-shrink-0"
                       >
                         <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                       </svg>
 
                       <span className="flex flex-col leading-tight font-inter">
-                        <span className="text-[16px] font-extralight text-[#000000]">
+                        <span className="text-[14px] sm:text-[16px] font-extralight text-[#000000]">
                           Data Collected Up To
                         </span>
 
-                        <strong className="text-[16px] font-medium text-[#000000]">
+                        <strong className="text-[14px] sm:text-[16px] font-medium text-[#000000]">
                           July 14 2026
                         </strong>
                       </span>
@@ -546,9 +546,8 @@ function ResultsContent() {
                 </div>
               </div>
 
-              {/* Profile images */}
-              <div className="flex items-center gap-4 xl:pt-1">
-                <div className="relative w-[280px] h-[120px] rounded-xl overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-stretch gap-4 xl:pt-1 w-full xl:w-auto">
+                <div className="relative w-full sm:w-[280px] xl:w-[280px] h-[150px] sm:h-[120px] rounded-xl overflow-hidden">
                   <Image
                     src="/images/hiking.jpg"
                     alt="Expedition Base"
@@ -558,7 +557,7 @@ function ResultsContent() {
                   />
                 </div>
 
-                <div className="relative w-[280px] h-[120px] rounded-xl overflow-hidden">
+                <div className="relative w-full sm:w-[280px] xl:w-[280px] h-[150px] sm:h-[120px] rounded-xl overflow-hidden">
                   <Image
                     src="/images/snowboarding.jpg"
                     alt="Summit Ridge"
@@ -576,11 +575,10 @@ function ResultsContent() {
             SCORE CARDS
         ================================================================= */}
 
-        <section className="w-full py-3">
-          <div className="w-full max-w-[1316px] mx-auto grid grid-cols-1 lg:grid-cols-[640px_640px] gap-6 lg:gap-9">
-            {/* Overall Safety Score */}
+        <section className="w-full px-3 sm:px-0 py-2 sm:py-3">
+          <div className="w-full max-w-[1316px] mx-auto grid grid-cols-1 lg:grid-cols-[640px_640px] gap-5 sm:gap-6 lg:gap-9">
             <div
-              className="w-full min-h-[229px] lg:h-[229px] rounded-xl p-6"
+              className="w-full min-h-[229px] lg:h-[229px] rounded-xl p-5 sm:p-6"
               style={sectionStyle}
             >
               <div className="flex items-center gap-3">
@@ -593,12 +591,12 @@ function ResultsContent() {
                 </span>
               </div>
 
-              <div className="mt-5 flex items-center justify-between">
-                <div className="font-poppins text-[75px] leading-[78px] font-bold text-[#2B2740] tracking-tight">
+              <div className="mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="font-poppins text-[55px] sm:text-[75px] leading-[60px] sm:leading-[78px] font-bold text-[#2B2740] tracking-tight">
                   85 / 100
                 </div>
 
-                <span className="h-[40px] min-w-[123px] px-4 rounded-lg bg-[#EDE7FB] text-[#7E6BB3] font-inter text-[20px] leading-[40px] text-center">
+                <span className="h-[40px] min-w-[123px] px-4 rounded-lg bg-[#EDE7FB] text-[#7E6BB3] font-inter text-[20px] leading-[40px] text-center self-start sm:self-auto">
                   Low Risk
                 </span>
               </div>
@@ -611,9 +609,8 @@ function ResultsContent() {
               </div>
             </div>
 
-            {/* Confidence */}
             <div
-              className="w-full min-h-[229px] lg:h-[229px] rounded-xl p-6"
+              className="w-full min-h-[229px] lg:h-[229px] rounded-xl p-5 sm:p-6"
               style={sectionStyle}
             >
               <div className="flex items-center gap-3">
@@ -626,8 +623,8 @@ function ResultsContent() {
                 </span>
               </div>
 
-              <div className="mt-4 flex items-center gap-6">
-                <div className="w-[75px] h-[75px] rounded-xl bg-[#EDE7FB] flex items-center justify-center flex-shrink-0">
+              <div className="mt-4 flex items-center gap-5 sm:gap-6">
+                <div className="w-[65px] h-[65px] sm:w-[75px] sm:h-[75px] rounded-full bg-[#EDE7FB] flex items-center justify-center flex-shrink-0">
                   <svg
                     width="60"
                     height="60"
@@ -649,12 +646,12 @@ function ResultsContent() {
                   </svg>
                 </div>
 
-                <div className="font-poppins text-[75px] leading-[78px] font-bold text-[#2B2740] tracking-tight">
+                <div className="font-poppins text-[55px] sm:text-[75px] leading-[60px] sm:leading-[78px] font-bold text-[#2B2740] tracking-tight">
                   90%
                 </div>
               </div>
 
-              <p className="mt-1 max-w-[500px] font-poppins text-[22px] leading-[27px] font-normal text-[#2B2740]">
+              <p className="mt-3 max-w-[500px] font-poppins text-[18px] sm:text-[22px] leading-[24px] sm:leading-[27px] font-normal text-[#2B2740]">
                 This operator satisfies our trained model&apos;s 7 required
                 dimensions for safety.
               </p>
@@ -666,9 +663,9 @@ function ResultsContent() {
             SAFETY SUMMARY
         ================================================================= */}
 
-        <section className="w-full py-3">
+        <section className="w-full px-3 sm:px-0 py-2 sm:py-3">
           <div
-            className="w-full max-w-[1316px] min-h-[258px] mx-auto rounded-xl p-6"
+            className="w-full max-w-[1316px] min-h-[258px] mx-auto rounded-xl p-5 sm:p-6"
             style={sectionStyle}
           >
             <div className="flex items-center gap-3">
@@ -679,66 +676,71 @@ function ResultsContent() {
               <span className="text-[#2B2740] text-lg">✦</span>
             </div>
 
-            <p className="mt-4 px-2 font-inter text-[22px] leading-[27px] font-normal text-[#2B2740] max-w-[1120px]">
+            <p className="mt-4 px-0 sm:px-2 font-inter text-[18px] sm:text-[22px] leading-[24px] sm:leading-[27px] font-normal text-[#2B2740] max-w-[1120px]">
               {query} demonstrates strong safety practices overall. Guides are
               well-qualified and emergency protocols are in place. We found no
               major incidents in the past 3 years. Some traveller feedback
               mention equipment maintenance inconsistencies on certain trips.
             </p>
 
-            {/* Larger chips: 5 purple on first row, 2 red on second row */}
-            <div className="mt-5 px-2 flex flex-wrap items-center gap-x-3 gap-y-3 max-w-[1000px]">
-              {[
-                'Quality of Experience',
-                'Incident History',
-                'Safety Sentiment',
-                'Quality of Regulation',
-                'Business Information',
-              ].map((label) => (
-                <span
-                  key={label}
-                  className="h-[32px] px-4 rounded-lg bg-[#EDE7FB] border border-[#C7B5F5]/50 flex items-center gap-2 font-inter text-[16px] leading-[20px] font-light text-[#7E6BB3] whitespace-nowrap"
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#3DCE9D"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+            <div className="mt-5 px-0 sm:px-2">
+              <div className="flex flex-col items-start gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:gap-3">
+                {[
+                  'Quality of Experience',
+                  'Incident History',
+                  'Safety Sentiment',
+                  'Quality of Regulation',
+                  'Business Information',
+                ].map((label) => (
+                  <span
+                    key={label}
+                    className="h-[32px] shrink-0 px-4 rounded-lg bg-[#EDE7FB] border border-[#C7B5F5]/50 flex items-center gap-2 font-inter text-[15px] sm:text-[16px] leading-[20px] font-light text-[#7E6BB3] whitespace-nowrap"
                   >
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#3D8A1E"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M5 12.5l4 4L19 7" />
+                    </svg>
 
-                  {label}
-                </span>
-              ))}
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-              {['Equipment Assessment', 'Risk Assessment'].map((label) => (
-                <span
-                  key={label}
-                  className="h-[32px] px-4 rounded-lg bg-[#FFF1E8] border border-[#F2CFC5] flex items-center gap-2 font-inter text-[16px] leading-[20px] font-light text-[#C51D14]/75 whitespace-nowrap"
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#C51D14"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+            <div className="mt-3 px-0 sm:px-2">
+              <div className="flex flex-col items-start gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:gap-3">
+                {['Equipment Assessment', 'Risk Assessment'].map((label) => (
+                  <span
+                    key={label}
+                    className="h-[32px] shrink-0 px-4 rounded-lg bg-[#FFF1E8] border border-[#F2CFC5] flex items-center gap-2 font-inter text-[15px] sm:text-[16px] leading-[20px] font-light text-[#C51D14]/75 whitespace-nowrap"
                   >
-                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <path d="M12 9v4" />
-                    <path d="M12 17h.01" />
-                  </svg>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#C51D14"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                      <path d="M12 9v4" />
+                      <path d="M12 17h.01" />
+                    </svg>
 
-                  {label}
-                </span>
-              ))}
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -747,12 +749,12 @@ function ResultsContent() {
             RISK BREAKDOWN
         ================================================================= */}
 
-        <section className="w-full py-3">
+        <section className="w-full px-3 sm:px-0 py-2 sm:py-3">
           <div
-            className="w-full max-w-[1316px] min-h-[360px] mx-auto rounded-xl p-6"
+            className="w-full max-w-[1316px] min-h-[360px] mx-auto rounded-xl p-5 sm:p-6"
             style={sectionStyle}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <h2 className="font-poppins text-[20px] leading-[25px] font-bold text-[#2B2740]">
                   Risk Breakdown
@@ -763,7 +765,7 @@ function ResultsContent() {
                 </span>
               </div>
 
-              <span className="font-inter text-[15px] font-medium text-[#7E6BB3] flex items-center gap-2">
+              <span className="font-inter text-[14px] sm:text-[15px] font-medium text-[#7E6BB3] flex items-center gap-2">
                 View full breakdown
                 <span className="text-[#3D8A1E] text-base font-extrabold">
                   →
@@ -771,13 +773,12 @@ function ResultsContent() {
               </span>
             </div>
 
-            {/* Shifted right; bars centered and scores pushed toward right */}
-            <div className="mt-5 px-3">
-              <div className="space-y-3">
+            <div className="mt-5 px-0 sm:px-3">
+              <div className="space-y-4 sm:space-y-3">
                 {riskItems.map((item) => (
                   <div
                     key={item.label}
-                    className="grid grid-cols-[220px_600px_1fr] items-center gap-4"
+                    className="grid grid-cols-1 lg:grid-cols-[220px_600px_1fr] items-center gap-2 lg:gap-4"
                   >
                     <div className="flex items-center gap-3">
                       <span className="w-[30px] h-[30px] rounded-lg bg-[#EDE7FB] flex items-center justify-center flex-shrink-0">
@@ -842,12 +843,12 @@ function ResultsContent() {
                         )}
                       </span>
 
-                      <span className="font-inter text-[15px] leading-[18px] font-medium text-[#000000]">
+                      <span className="font-inter text-[14px] sm:text-[15px] leading-[18px] font-medium text-[#000000]">
                         {item.label}
                       </span>
                     </div>
 
-                    <div className="w-[600px] h-[15px] rounded-full bg-[#D9D9D9]/75 overflow-hidden">
+                    <div className="w-full lg:w-[600px] h-[15px] rounded-full bg-[#D9D9D9]/75 overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{
@@ -870,7 +871,7 @@ function ResultsContent() {
               </div>
             </div>
 
-            <p className="mt-4 ml-3 flex items-center gap-2 font-inter text-[11px] text-[#000000]/60">
+            <p className="mt-4 ml-0 sm:ml-3 flex items-center gap-2 font-inter text-[11px] text-[#000000]/60">
               <span className="w-3.5 h-3.5 rounded-full bg-[#000000]/20 text-white flex items-center justify-center text-[8px] font-bold">
                 i
               </span>
@@ -883,12 +884,12 @@ function ResultsContent() {
             INCIDENT TIMELINE
         ================================================================= */}
 
-        <section className="w-full py-3">
+        <section className="w-full px-3 sm:px-0 py-2 sm:py-3">
           <div
-            className="w-full max-w-[1316px] min-h-[328px] mx-auto rounded-xl p-6"
+            className="w-full max-w-[1316px] min-h-[328px] mx-auto rounded-xl p-5 sm:p-6"
             style={sectionStyle}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <h2 className="font-poppins text-[20px] leading-[25px] font-bold text-[#2B2740]">
                   Incident Timeline
@@ -899,7 +900,7 @@ function ResultsContent() {
                 </span>
               </div>
 
-              <span className="font-inter text-[15px] font-medium text-[#7E6BB3] flex items-center gap-2">
+              <span className="font-inter text-[14px] sm:text-[15px] font-medium text-[#7E6BB3] flex items-center gap-2">
                 View full breakdown
                 <span className="text-[#3D8A1E] text-base font-extrabold">
                   →
@@ -907,159 +908,309 @@ function ResultsContent() {
               </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-[155px_1px_minmax(0,1fr)] gap-5">
-              <div className="relative space-y-7">
-                <div className="flex items-start gap-3">
-                  <svg
-                    width="30"
-                    height="30"
-                    viewBox="0 0 30 30"
-                    fill="none"
-                    className="flex-shrink-0"
-                  >
-                    <path
-                      d="M15 2.5L24 6V13.5C24 19.8 20 24.5 15 27C10 24.5 6 19.8 6 13.5V6L15 2.5Z"
-                      stroke="#7E6BB3"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M11 14.5L14 17.5L19.5 11"
-                      stroke="#7E6BB3"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-
-                  <div>
-                    <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                      Apr 12, 2025
-                    </div>
-
-                    <div className="font-inter text-[14px] text-[#7E6BB3]">
-                      Minor
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-[30px] h-[30px] rounded-full bg-[#9AA0A6] flex items-center justify-center flex-shrink-0">
+            {/* Mobile: each date stays with its corresponding incident.
+                Desktop: existing three-column layout remains unchanged. */}
+            <div className="mt-4">
+              <div className="md:hidden space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3 w-[125px] flex-shrink-0">
                     <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
+                      width="30"
+                      height="30"
+                      viewBox="0 0 30 30"
                       fill="none"
-                      stroke="white"
-                      strokeWidth="2.5"
+                      className="flex-shrink-0"
                     >
                       <path
-                        d="M5 12l4 4L19 6"
+                        d="M15 2.5L24 6V13.5C24 19.8 20 24.5 15 27C10 24.5 6 19.8 6 13.5V6L15 2.5Z"
+                        stroke="#7E6BB3"
+                        strokeWidth="1.5"
+                      />
+                      <path
+                        d="M11 14.5L14 17.5L19.5 11"
+                        stroke="#7E6BB3"
+                        strokeWidth="1.7"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                     </svg>
+
+                    <div>
+                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
+                        Apr 12, 2025
+                      </div>
+
+                      <div className="font-inter text-[14px] text-[#7E6BB3]">
+                        Minor
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                      Oct 3, 2023
-                    </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-inter text-[17px] leading-[22px] font-medium text-[#2B2740]">
+                      Mild altitude sickness reported
+                    </h3>
 
-                    <div className="font-inter text-[14px] text-[#000000]/60">
-                      None
-                    </div>
+                    <p className="mt-1 font-inter text-[14px] leading-[18px] text-[#000000]/75">
+                      Trekking group experienced mild altitude sickness.
+                      Managed on site, no evacuation required.
+                    </p>
+
+                    <span className="mt-2 block font-inter text-[13px] text-[#000000]/60">
+                      Source: Instagram
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <svg
-                    width="30"
-                    height="30"
-                    viewBox="0 0 30 30"
-                    fill="none"
-                    className="flex-shrink-0"
-                  >
-                    <path
-                      d="M15 4L27 25H3L15 4Z"
-                      stroke="#C51D14"
-                      strokeWidth="1.3"
-                    />
-                    <path
-                      d="M15 11v7"
-                      stroke="#C51D14"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="15" cy="21" r="1" fill="#C51D14" />
-                  </svg>
-
-                  <div>
-                    <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                      May 21, 2021
+                <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3 w-[125px] flex-shrink-0">
+                    <div className="w-[30px] h-[30px] rounded-full bg-[#9AA0A6] flex items-center justify-center flex-shrink-0">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="2.5"
+                      >
+                        <path
+                          d="M5 12l4 4L19 6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
                     </div>
 
-                    <div className="font-inter text-[14px] text-[#FBC02D]">
-                      Moderate
+                    <div>
+                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
+                        Oct 3, 2023
+                      </div>
+
+                      <div className="font-inter text-[14px] text-[#000000]/60">
+                        None
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-inter text-[17px] leading-[22px] font-medium text-[#2B2740]">
+                      No incidents reported
+                    </h3>
+
+                    <p className="mt-1 font-inter text-[14px] leading-[18px] text-[#000000]/75">
+                      No safety incidents found during this period.
+                    </p>
+
+                    <span className="mt-2 block font-inter text-[13px] text-[#000000]/60">
+                      Source: Company Website
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3 w-[125px] flex-shrink-0">
+                    <svg
+                      width="30"
+                      height="30"
+                      viewBox="0 0 30 30"
+                      fill="none"
+                      className="flex-shrink-0"
+                    >
+                      <path
+                        d="M15 4L27 25H3L15 4Z"
+                        stroke="#C51D14"
+                        strokeWidth="1.3"
+                      />
+                      <path
+                        d="M15 11v7"
+                        stroke="#C51D14"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                      <circle cx="15" cy="21" r="1" fill="#C51D14" />
+                    </svg>
+
+                    <div>
+                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
+                        May 21, 2021
+                      </div>
+
+                      <div className="font-inter text-[14px] text-[#FBC02D]">
+                        Moderate
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-inter text-[17px] leading-[22px] font-medium text-[#2B2740]">
+                      Rescue delayed due to weather
+                    </h3>
+
+                    <p className="mt-1 font-inter text-[14px] leading-[18px] text-[#000000]/75">
+                      Bad weather delayed rescue response by approximately 2
+                      hours. No injuries were reported.
+                    </p>
+
+                    <span className="mt-2 block font-inter text-[13px] text-[#000000]/60">
+                      Source: News Article
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="w-px bg-[#2B2740]/15" />
+              <div className="hidden md:grid md:grid-cols-[155px_1px_minmax(0,1fr)] gap-5">
+                <div className="relative space-y-7">
+                  <div className="flex items-start gap-3">
+                    <svg
+                      width="30"
+                      height="30"
+                      viewBox="0 0 30 30"
+                      fill="none"
+                      className="flex-shrink-0"
+                    >
+                      <path
+                        d="M15 2.5L24 6V13.5C24 19.8 20 24.5 15 27C10 24.5 6 19.8 6 13.5V6L15 2.5Z"
+                        stroke="#7E6BB3"
+                        strokeWidth="1.5"
+                      />
+                      <path
+                        d="M11 14.5L14 17.5L19.5 11"
+                        stroke="#7E6BB3"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
 
-              <div className="space-y-6">
-                <div className="grid grid-cols-[1fr_150px] gap-6">
-                  {/* Details shifted right; source stays fixed */}
-                  <div className="translate-x-5">
-                    <h3 className="font-inter text-[18px] leading-[22px] font-medium text-[#2B2740]">
-                      Mild altitude sickness reported
-                    </h3>
+                    <div>
+                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
+                        Apr 12, 2025
+                      </div>
 
-                    <p className="mt-1 font-inter text-[15px] leading-[18px] text-[#000000]/75">
-                      Trekking group experienced mild altitude sickness.
-                      <br />
-                      Managed on site, no evacuation required.
-                    </p>
+                      <div className="font-inter text-[14px] text-[#7E6BB3]">
+                        Minor
+                      </div>
+                    </div>
                   </div>
 
-                  <span className="self-center font-inter text-[14px] text-[#000000]/60">
-                    Source: Instagram
-                  </span>
+                  <div className="flex items-start gap-3">
+                    <div className="w-[30px] h-[30px] rounded-full bg-[#9AA0A6] flex items-center justify-center flex-shrink-0">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="2.5"
+                      >
+                        <path
+                          d="M5 12l4 4L19 6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+
+                    <div>
+                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
+                        Oct 3, 2023
+                      </div>
+
+                      <div className="font-inter text-[14px] text-[#000000]/60">
+                        None
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <svg
+                      width="30"
+                      height="30"
+                      viewBox="0 0 30 30"
+                      fill="none"
+                      className="flex-shrink-0"
+                    >
+                      <path
+                        d="M15 4L27 25H3L15 4Z"
+                        stroke="#C51D14"
+                        strokeWidth="1.3"
+                      />
+                      <path
+                        d="M15 11v7"
+                        stroke="#C51D14"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                      <circle cx="15" cy="21" r="1" fill="#C51D14" />
+                    </svg>
+
+                    <div>
+                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
+                        May 21, 2021
+                      </div>
+
+                      <div className="font-inter text-[14px] text-[#FBC02D]">
+                        Moderate
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-[1fr_150px] gap-6">
-                  <div className="translate-x-5">
-                    <h3 className="font-inter text-[18px] leading-[22px] font-medium text-[#2B2740]">
-                      No incidents reported
-                    </h3>
+                <div className="w-px bg-[#2B2740]/15" />
 
-                    <p className="mt-1 font-inter text-[15px] leading-[18px] text-[#000000]/75">
-                      No safety incidents found during this period.
-                    </p>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_150px] gap-3 lg:gap-6">
+                    <div className="lg:translate-x-5">
+                      <h3 className="font-inter text-[17px] sm:text-[18px] leading-[22px] font-medium text-[#2B2740]">
+                        Mild altitude sickness reported
+                      </h3>
+
+                      <p className="mt-1 font-inter text-[14px] sm:text-[15px] leading-[18px] text-[#000000]/75">
+                        Trekking group experienced mild altitude sickness.
+                        <br className="hidden sm:block" />
+                        Managed on site, no evacuation required.
+                      </p>
+                    </div>
+
+                    <span className="self-start lg:self-center font-inter text-[13px] sm:text-[14px] text-[#000000]/60">
+                      Source: Instagram
+                    </span>
                   </div>
 
-                  <span className="self-center font-inter text-[14px] text-[#000000]/60">
-                    Source: Company Website
-                  </span>
-                </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_150px] gap-3 lg:gap-6">
+                    <div className="lg:translate-x-5">
+                      <h3 className="font-inter text-[17px] sm:text-[18px] leading-[22px] font-medium text-[#2B2740]">
+                        No incidents reported
+                      </h3>
 
-                <div className="grid grid-cols-[1fr_150px] gap-6">
-                  <div className="translate-x-5">
-                    <h3 className="font-inter text-[18px] leading-[22px] font-medium text-[#2B2740]">
-                      Rescue delayed due to weather
-                    </h3>
+                      <p className="mt-1 font-inter text-[14px] sm:text-[15px] leading-[18px] text-[#000000]/75">
+                        No safety incidents found during this period.
+                      </p>
+                    </div>
 
-                    <p className="mt-1 font-inter text-[15px] leading-[18px] text-[#000000]/75">
-                      Bad weather delayed rescue response by approximately 2
-                      hours.
-                      <br />
-                      No injuries were reported.
-                    </p>
+                    <span className="self-start lg:self-center font-inter text-[13px] sm:text-[14px] text-[#000000]/60">
+                      Source: Company Website
+                    </span>
                   </div>
 
-                  <span className="self-center font-inter text-[14px] text-[#000000]/60">
-                    Source: News Article
-                  </span>
+                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_150px] gap-3 lg:gap-6">
+                    <div className="lg:translate-x-5">
+                      <h3 className="font-inter text-[17px] sm:text-[18px] leading-[22px] font-medium text-[#2B2740]">
+                        Rescue delayed due to weather
+                      </h3>
+
+                      <p className="mt-1 font-inter text-[14px] sm:text-[15px] leading-[18px] text-[#000000]/75">
+                        Bad weather delayed rescue response by approximately 2
+                        hours.
+                        <br className="hidden sm:block" />
+                        No injuries were reported.
+                      </p>
+                    </div>
+
+                    <span className="self-start lg:self-center font-inter text-[13px] sm:text-[14px] text-[#000000]/60">
+                      Source: News Article
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1070,13 +1221,13 @@ function ResultsContent() {
             ASSESSMENT
         ================================================================= */}
 
-        <section className="w-full py-3">
+        <section className="w-full px-3 sm:px-0 py-2 sm:py-3">
           <div
             className="w-full max-w-[1316px] min-h-[142px] mx-auto rounded-xl p-3"
             style={sectionStyle}
           >
             <div
-              className="w-full h-full min-h-[116px] rounded-xl px-7 py-5"
+              className="w-full h-full min-h-[116px] rounded-xl px-5 sm:px-7 py-5"
               style={{
                 background: '#F6F4FE',
                 border: '0.15px solid rgba(43, 39, 64, 0.10)',
@@ -1087,7 +1238,7 @@ function ResultsContent() {
                 Assessment
               </h2>
 
-              <p className="mt-2 font-inter text-[22px] leading-[27px] font-medium text-[#000000]">
+              <p className="mt-2 font-inter text-[18px] sm:text-[22px] leading-[24px] sm:leading-[27px] font-medium text-[#000000]">
                 The operator satisfies our safety framework for (trip-type)
                 safety.
               </p>
@@ -1099,9 +1250,9 @@ function ResultsContent() {
             RECOMMENDED DOCUMENTS
         ================================================================= */}
 
-        <section className="w-full py-3">
+        <section className="w-full px-3 sm:px-0 py-2 sm:py-3">
           <div
-            className="w-full max-w-[1316px] min-h-[200px] mx-auto rounded-xl p-6"
+            className="w-full max-w-[1316px] min-h-[200px] mx-auto rounded-xl p-5 sm:p-6"
             style={sectionStyle}
           >
             <div className="flex items-center gap-3">
@@ -1119,7 +1270,7 @@ function ResultsContent() {
               safety practices.
             </p>
 
-            <div className="mt-3 flex items-center justify-between px-8">
+            <div className="mt-3 grid grid-cols-2 gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-5 sm:px-4 md:px-8">
               {[
                 {
                   title: (
@@ -1286,7 +1437,7 @@ function ResultsContent() {
                 {
                   title: (
                     <>
-                      Permits &
+                      Permits &amp;
                       <br />
                       Authorisations
                     </>
@@ -1330,9 +1481,8 @@ function ResultsContent() {
               ].map((doc, index) => (
                 <div
                   key={index}
-                  className="group w-[120px] h-[120px] rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ease-out hover:bg-white hover:-translate-y-1 hover:shadow-md"
+                  className="group w-full sm:w-[120px] h-[120px] rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ease-out bg-[#F6F4FE] hover:bg-white hover:-translate-y-1 hover:shadow-md"
                   style={{
-                    background: '#F6F4FE',
                     border: '0.1px solid rgba(43, 39, 64, 0.10)',
                     boxShadow: '0 3px 10px rgba(43, 39, 64, 0.05)',
                   }}
@@ -1352,9 +1502,9 @@ function ResultsContent() {
             FOOTER / ACTIONS
         ================================================================= */}
 
-        <section className="w-full py-3 pb-0">
+        <section className="w-full px-3 sm:px-0 py-2 sm:py-3 pb-0">
           <div
-            className="w-full max-w-[1316px] min-h-[210px] mx-auto rounded-t-xl rounded-b-none px-8 py-5"
+            className="w-full max-w-[1316px] min-h-[210px] mx-auto rounded-t-xl rounded-b-none px-5 sm:px-8 py-5"
             style={{
               background: 'rgba(126, 107, 179, 0.80)',
             }}
@@ -1365,7 +1515,7 @@ function ResultsContent() {
 
             <div className="mt-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               <button
-                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
+                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
                 <svg
                   width="25"
@@ -1383,7 +1533,7 @@ function ResultsContent() {
               </button>
 
               <button
-                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
+                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
                 <svg
                   width="25"
@@ -1401,7 +1551,7 @@ function ResultsContent() {
               </button>
 
               <button
-                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
+                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
                 <span className="w-[25px] h-[25px] rounded-full border border-[#2B2740] flex items-center justify-center">
                   ?
@@ -1411,7 +1561,7 @@ function ResultsContent() {
               </button>
 
               <button
-                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
+                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
                 <svg
                   width="25"
@@ -1426,9 +1576,11 @@ function ResultsContent() {
                   <path d="M12 11v6M9 14h6" />
                 </svg>
 
-                DOWNLOAD RECOMMENDED
-                <br />
-                QUESTIONS
+                <span className="text-center">
+                  DOWNLOAD RECOMMENDED
+                  <br />
+                  QUESTIONS
+                </span>
               </button>
             </div>
 
