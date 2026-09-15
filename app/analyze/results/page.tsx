@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { auth } from '@/lib/firebase-client';
 import { onAuthStateChanged } from 'firebase/auth';
 import { FaBug, FaTools } from 'react-icons/fa';
+import { jsPDF } from 'jspdf';
 
 const sectionStyle = {
   background: '#F6F4FE',
@@ -19,6 +20,259 @@ function ResultsContent() {
   const router = useRouter();
 
   const [authReady, setAuthReady] = useState(false);
+
+  const downloadSafetyQuestions = () => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+
+    const BG = '#F9F8FF';
+    const PURPLE = '#7E6BB3';
+    const DARK = '#2B2740';
+    const BLACK = '#000000';
+    const LIGHT_PURPLE = '#DCD4F0';
+
+    const hexToRgb = (hex: string) => {
+      const value = hex.replace('#', '');
+      return {
+        r: parseInt(value.substring(0, 2), 16),
+        g: parseInt(value.substring(2, 4), 16),
+        b: parseInt(value.substring(4, 6), 16),
+      };
+    };
+
+    const setTextColor = (hex: string) => {
+      const { r, g, b } = hexToRgb(hex);
+      doc.setTextColor(r, g, b);
+    };
+
+    const setDrawColor = (hex: string) => {
+      const { r, g, b } = hexToRgb(hex);
+      doc.setDrawColor(r, g, b);
+    };
+
+    const setFillColor = (hex: string) => {
+      const { r, g, b } = hexToRgb(hex);
+      doc.setFillColor(r, g, b);
+    };
+
+    const paintPageBackground = () => {
+      setFillColor(BG);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+    };
+
+    paintPageBackground();
+
+    let y = 20;
+
+    const addPage = () => {
+      doc.addPage();
+      paintPageBackground();
+      y = 20;
+    };
+
+    const ensureSpace = (heightNeeded: number) => {
+      if (y + heightNeeded > pageHeight - 18) {
+        addPage();
+      }
+    };
+
+    const addTitle = (text: string) => {
+      ensureSpace(20);
+      setTextColor(PURPLE);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+
+      const lines = doc.splitTextToSize(text, contentWidth);
+      doc.text(lines, margin, y);
+      y += lines.length * 8 + 5;
+    };
+
+    const addSubtitle = (text: string) => {
+      ensureSpace(12);
+      setTextColor(DARK);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+
+      const lines = doc.splitTextToSize(text, contentWidth);
+      doc.text(lines, margin, y);
+      y += lines.length * 5.5 + 4;
+    };
+
+    const addParagraph = (text: string) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      setTextColor(BLACK);
+
+      const lines = doc.splitTextToSize(text, contentWidth);
+      const height = lines.length * 4.8 + 4;
+
+      ensureSpace(height);
+      doc.text(lines, margin, y);
+      y += height;
+    };
+
+    const addSection = (title: string, why: string, questions: string[]) => {
+      ensureSpace(25);
+
+      setTextColor(DARK);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text(title, margin, y);
+      y += 7;
+
+      setDrawColor(LIGHT_PURPLE);
+      doc.setLineWidth(0.4);
+      doc.line(margin, y, pageWidth - margin, y);
+
+      y += 6;
+
+      setTextColor(DARK);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text('Why ask these questions?', margin, y);
+      y += 5;
+
+      addParagraph(why);
+
+      questions.forEach((question) => {
+        const questionLines = doc.splitTextToSize(question, contentWidth - 6);
+        const height = questionLines.length * 4.8 + 2;
+
+        ensureSpace(height);
+
+        setTextColor(BLACK);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.text(questionLines, margin + 6, y);
+
+        y += height;
+      });
+
+      y += 4;
+    };
+
+    addTitle('Safety Questions to Ask an Adventure Operator');
+
+    addSubtitle('Before You Book or Participate');
+
+    addParagraph(
+      'Every adventure activity carries some level of risk. A responsible operator should be able to explain how they prepare for risks, protect participants, and respond when something unexpected happens.'
+    );
+
+    addParagraph(
+      'You do not need to ask every question. Choose the questions most relevant to your trip and look for clear, specific answers rather than vague assurances.'
+    );
+
+    addSection(
+      '1. Emergency Response',
+      'Emergencies can happen even when an activity is carefully planned. These questions help you understand whether the operator has a clear plan for dealing with injuries, illness, evacuation, and other serious situations.',
+      [
+        '1. What happens if someone gets injured or becomes sick during the activity?',
+        '2. What is your emergency evacuation procedure if someone needs urgent medical help?',
+        '3. How long would it normally take for emergency assistance to reach the group?',
+        '4. How would you contact emergency services if there is little or no mobile signal?',
+        '5. What happens if the guide is injured or unable to continue during the activity?',
+      ]
+    );
+
+    addSection(
+      '2. Guides & Supervision',
+      "Guides are responsible for making important safety decisions and helping participants respond to problems. Their training, experience, and ability to supervise the group are therefore important parts of the operator's safety system.",
+      [
+        '6. What safety training and qualifications do your guides have?',
+        '7. Are your guides trained in first aid, CPR, and emergency response?',
+        '8. How many participants does each guide supervise?',
+        '9. How do you make sure your guides follow your safety procedures?',
+        '10. Who can make the decision to stop an activity if it becomes unsafe?',
+      ]
+    );
+
+    addSection(
+      '3. Safety Briefing & Preparation',
+      'Travellers should know what they are getting into before an activity begins. A good safety briefing should explain important risks, procedures, expectations, and what participants should do if something goes wrong.',
+      [
+        '11. Is there a safety briefing before the activity, and what does it cover?',
+        '12. What safety requirements do I need to meet before participating?',
+        '13. How do you make sure participants understand the important safety instructions before starting?',
+      ]
+    );
+
+    addSection(
+      '4. Equipment & Safety Checks',
+      'Safety equipment needs to be properly maintained and checked. These questions help you understand whether the operator has a consistent process for keeping equipment safe and dealing with equipment problems.',
+      [
+        '14. How is your safety equipment inspected and maintained?',
+        '15. How do you check that equipment is safe before each activity?',
+        '16. What safety equipment do you provide, and what am I expected to bring?',
+        '17. What happens if important safety equipment fails during the activity?',
+      ]
+    );
+
+    addSection(
+      '5. Risk Management & Changing Conditions',
+      'Conditions can change during an adventure. A responsible operator should continuously assess risks and be willing to change, delay, or stop an activity when continuing could put participants in danger.',
+      [
+        '18. How do you assess safety risks before each activity?',
+        '19. What conditions would make you cancel, postpone, change, or stop an activity?',
+        '20. What do you do if conditions become unsafe after the activity has already started?',
+        '21. How do you monitor changing conditions during the activity?',
+      ]
+    );
+
+    addSection(
+      '6. Participant Safety & Accountability',
+      'Operators need to know where their participants are and what to do if someone becomes separated, lost, injured, or unable to continue. These questions help you understand how participants are monitored throughout the experience.',
+      [
+        '22. How do you keep track of participants throughout the activity?',
+        '23. What happens if someone becomes separated from the group or gets lost?',
+        '24. What happens if a participant cannot safely continue the activity?',
+      ]
+    );
+
+    addSection(
+      '7. Learning From Incidents',
+      'A strong safety culture includes learning from things that have gone wrong - not just serious accidents, but also near misses and other safety concerns. How an operator responds to previous incidents can tell you a lot about how seriously it takes safety.',
+      [
+        '25. Have you had any serious accidents, near misses, or other safety incidents, and what did you change as a result?',
+      ]
+    );
+
+    ensureSpace(35);
+
+    setTextColor(DARK);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Traveller Safety Reminder', margin, y);
+    y += 7;
+
+    setDrawColor(LIGHT_PURPLE);
+    doc.setLineWidth(0.4);
+    doc.line(margin, y, pageWidth - margin, y);
+
+    y += 6;
+
+    addParagraph(
+      'When asking these questions, pay attention not only to what the operator says, but also to how clearly and confidently they can explain their safety procedures.'
+    );
+
+    addParagraph(
+      'A reassuring answer should ideally be specific, understandable, and consistent. Be cautious of answers that are vague, dismissive, contradictory, or suggest that safety decisions are made only after something goes wrong.'
+    );
+
+    addParagraph(
+      'Remember: Asking these questions does not guarantee that an activity is safe. They are intended to help you make a more informed decision and identify areas where you may need further information before participating.'
+    );
+
+    doc.save('Safety-questions-to-ask-an-adventure-operator.pdf');
+  };
 
   const query = searchParams.get('q') || 'Summit Trails Expeditions';
 
@@ -1514,13 +1768,42 @@ function ResultsContent() {
               Actions
             </h2>
 
-            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               <button
                 type="button"
                 onClick={() => router.push('/report-issue')}
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
-                <FaBug size={25} color="#2B2740" />
+                <svg
+                  width="25"
+                  height="25"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#2B2740"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 8.5V6.8a3 3 0 0 1 6 0v1.7" />
+                  <path d="M7.5 9.5h9a3 3 0 0 1 3 3v3.5a4 4 0 0 1-4 4h-7a4 4 0 0 1-4-4v-3.5a3 3 0 0 1 3-3Z" />
+                  <path d="M5 13H3.5M20.5 13H19" />
+                  <path d="M8 10 6.5 8.5M16 10l1.5-1.5" />
+                  <circle
+                    cx="9.5"
+                    cy="13.5"
+                    r=".75"
+                    fill="#2B2740"
+                    stroke="none"
+                  />
+                  <circle
+                    cx="14.5"
+                    cy="13.5"
+                    r=".75"
+                    fill="#2B2740"
+                    stroke="none"
+                  />
+                  <path d="M10 16.5c.8.7 3.2.7 4 0" />
+                </svg>
 
                 REPORT A BUG
               </button>
@@ -1530,12 +1813,28 @@ function ResultsContent() {
                 onClick={() => router.push('/report-issue?type=feature')}
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
-                <FaTools size={25} color="#2B2740" />
+                <svg
+                  width="25"
+                  height="25"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#2B2740"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14.5 4.5a4.5 4.5 0 0 0 5 5l-7.8 7.8a2.2 2.2 0 0 1-3.1-3.1L16.4 6.4a4.5 4.5 0 0 0-1.9-1.9Z" />
+                  <path d="m6.2 6.2 3.1 3.1" />
+                  <path d="m4.5 19.5 2.2-2.2" />
+                  <path d="m4 4 3 3" />
+                  <path d="m16.5 16.5 3 3" />
+                </svg>
 
                 REQUEST A FEATURE
               </button>
 
               <button
+                type="button"
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
                 <span className="w-[25px] h-[25px] rounded-full border border-[#2B2740] flex items-center justify-center">
@@ -1546,7 +1845,9 @@ function ResultsContent() {
               </button>
 
               <button
-                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
+                type="button"
+                onClick={downloadSafetyQuestions}
+                className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors px-3"
               >
                 <svg
                   width="25"
@@ -1555,6 +1856,9 @@ function ResultsContent() {
                   fill="none"
                   stroke="#2B2740"
                   strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="shrink-0"
                 >
                   <path d="M6 3h9l4 4v14H6z" />
                   <path d="M15 3v5h5" />
