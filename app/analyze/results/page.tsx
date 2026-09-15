@@ -6,7 +6,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/lib/firebase-client';
 import { onAuthStateChanged } from 'firebase/auth';
-import { FaBug, FaTools } from 'react-icons/fa';
+import { FaBug, FaTools, FaFilePdf } from 'react-icons/fa';
+import { downloadRecommendedQuestionsPdf } from '@/lib/recommended-questions';
 
 const sectionStyle = {
   background: '#F6F4FE',
@@ -1536,6 +1537,8 @@ function ResultsContent() {
               </button>
 
               <button
+                type="button"
+                onClick={() => router.push('/help')}
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
                 <span className="w-[25px] h-[25px] rounded-full border border-[#2B2740] flex items-center justify-center">
@@ -1546,20 +1549,11 @@ function ResultsContent() {
               </button>
 
               <button
+                type="button"
+                onClick={() => downloadRecommendedQuestionsPdf(query)}
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
-                <svg
-                  width="25"
-                  height="25"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#2B2740"
-                  strokeWidth="1.5"
-                >
-                  <path d="M6 3h9l4 4v14H6z" />
-                  <path d="M15 3v5h5" />
-                  <path d="M12 11v6M9 14h6" />
-                </svg>
+                <FaFilePdf size={25} color="#2B2740" />
 
                 <span className="text-center">
                   DOWNLOAD RECOMMENDED
