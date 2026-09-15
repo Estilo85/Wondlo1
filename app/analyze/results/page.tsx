@@ -1835,6 +1835,7 @@ function ResultsContent() {
 
               <button
                 type="button"
+                onClick={() => router.push('/help')}
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
                 <span className="w-[25px] h-[25px] rounded-full border border-[#2B2740] flex items-center justify-center">
