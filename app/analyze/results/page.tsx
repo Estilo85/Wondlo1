@@ -712,7 +712,7 @@ function ResultsContent() {
                         </span>
 
                         <strong className="text-[14px] sm:text-[16px] font-medium text-[#000000]">
-                          July 15 2026
+                          {generatedDate}
                         </strong>
                       </span>
                     </div>
@@ -744,7 +744,7 @@ function ResultsContent() {
                         </span>
 
                         <strong className="text-[14px] sm:text-[16px] font-medium text-[#000000]">
-                          July 14 2026
+                          {coveredUpToDate}
                         </strong>
                       </span>
                     </div>
