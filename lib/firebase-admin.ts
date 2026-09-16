@@ -27,7 +27,7 @@ function initializeFirebaseAdmin(): App {
 }
 
 firebaseApp = initializeFirebaseAdmin();
-const adminAuth: Auth = getAuth(firebaseApp);
+export const adminAuth: Auth = getAuth(firebaseApp);
 
 export async function createFirebaseUser(email: string, displayName: string) {
   try {
