@@ -1,13 +1,15 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/lib/firebase-client';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { FaBug, FaTools, FaFilePdf } from 'react-icons/fa';
 import { downloadRecommendedQuestionsPdf } from '@/lib/recommended-questions';
+import FreeSidebar from '@/components/FreeSidebar';
+import { generateMockAnalysis, type AnalysisReport, type DimensionScores } from '@/lib/mock-analysis';
 
 const sectionStyle = {
   background: '#F6F4FE',
@@ -20,8 +22,17 @@ function ResultsContent() {
   const router = useRouter();
 
   const [authReady, setAuthReady] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userName, setUserName] = useState('TRAVELLER');
+  const [searchesLeft, setSearchesLeft] = useState(3);
+  const consumedRef = useRef(false);
 
   const query = searchParams.get('q') || 'Summit Trails Expeditions';
+
+  const analysis = useMemo(
+    () => generateMockAnalysis(query),
+    [query]
+  );
 
   const today = new Date();
 
@@ -40,140 +51,132 @@ function ResultsContent() {
     day: 'numeric',
   });
 
-  const riskDefaults: Record<
-    string,
-    { score: string; width: string; color: string }
-  > = {
-    'Quality of Experience': {
-      score: '90 / 100',
-      width: '90%',
-      color: 'bg-[#7E6BB3]',
-    },
-    'Quality of Regulation': {
-      score: '78 / 100',
-      width: '78%',
-      color: 'bg-[#7E6BB3]',
-    },
-    'Incident History': {
-      score: '85 / 100',
-      width: '85%',
-      color: 'bg-[#7E6BB3]',
-    },
-    'Business Information': {
-      score: '80 / 100',
-      width: '80%',
-      color: 'bg-[#7E6BB3]',
-    },
-    'Risk Assessment': {
-      score: '70 / 100',
-      width: '70%',
-      color: 'bg-[#FBC02D]',
-    },
-    'Equipment Assessment': {
-      score: '65 / 100',
-      width: '65%',
-      color: 'bg-[#FBC02D]',
-    },
-    'Safety Sentiment': {
-      score: '77 / 100',
-      width: '77%',
-      color: 'bg-[#7E6BB3]',
-    },
-  };
-
-  const riskByCompany: Record<string, typeof riskDefaults> = {
-    'Himalayan Adventure Co': {
-      'Quality of Experience': {
-        score: '82 / 100',
-        width: '82%',
-        color: 'bg-[#7E6BB3]',
-      },
-      'Quality of Regulation': {
-        score: '74 / 100',
-        width: '74%',
-        color: 'bg-[#7E6BB3]',
-      },
-      'Incident History': {
-        score: '68 / 100',
-        width: '68%',
-        color: 'bg-[#FBC02D]',
-      },
-      'Business Information': {
-        score: '88 / 100',
-        width: '88%',
-        color: 'bg-[#7E6BB3]',
-      },
-      'Risk Assessment': {
-        score: '55 / 100',
-        width: '55%',
-        color: 'bg-[#FBC02D]',
-      },
-      'Equipment Assessment': {
-        score: '60 / 100',
-        width: '60%',
-        color: 'bg-[#FBC02D]',
-      },
-      'Safety Sentiment': {
-        score: '79 / 100',
-        width: '79%',
-        color: 'bg-[#7E6BB3]',
-      },
-    },
-  };
-
-  const companyRisk = riskByCompany[query] ?? riskDefaults;
-
-  const riskItems = [
-    {
-      label: 'Quality of Experience',
-      score: '90',
-      width: '90%',
-      color: '#7E6BB3',
-      icon: 'experience',
-    },
-    {
-      label: 'Quality of Regulation',
-      score: '78',
-      width: '78%',
-      color: '#7E6BB3',
-      icon: 'regulation',
-    },
-    {
-      label: 'Incident History',
-      score: '85',
-      width: '85%',
-      color: '#7E6BB3',
-      icon: 'incident',
-    },
-    {
-      label: 'Business Information',
-      score: '80',
-      width: '80%',
-      color: '#7E6BB3',
-      icon: 'business',
-    },
-    {
-      label: 'Risk Assessment',
-      score: '70',
-      width: '70%',
-      color: '#FBC02D',
-      icon: 'risk',
-    },
-    {
-      label: 'Equipment Assessment',
-      score: '65',
-      width: '65%',
-      color: '#FBC02D',
-      icon: 'equipment',
-    },
-    {
-      label: 'Safety Sentiment',
-      score: '77',
-      width: '77%',
-      color: '#7E6BB3',
-      icon: 'sentiment',
-    },
+  const dimensionList: {
+    key: keyof DimensionScores;
+    label: string;
+    icon: string;
+  }[] = [
+    { key: 'qualityOfExperience', label: 'Quality of Experience', icon: 'experience' },
+    { key: 'qualityOfRegulation', label: 'Quality of Regulation', icon: 'regulation' },
+    { key: 'incidentHistory', label: 'Incident History', icon: 'incident' },
+    { key: 'businessInformation', label: 'Business Information', icon: 'business' },
+    { key: 'riskAssessment', label: 'Risk Assessment', icon: 'risk' },
+    { key: 'equipmentAssessment', label: 'Equipment Assessment', icon: 'equipment' },
+    { key: 'safetySentiment', label: 'Safety Sentiment', icon: 'sentiment' },
   ];
+
+  const riskItems = analysis
+    ? dimensionList.map(({ key, label, icon }) => {
+        const score = Number(analysis.dimensions[key]) || 0;
+        const color = score >= 75 ? '#7E6BB3' : '#FBC02D';
+        return { label, score: String(score), width: `${score}%`, color, icon };
+      })
+    : [
+        {
+          label: 'Quality of Experience',
+          score: '90',
+          width: '90%',
+          color: '#7E6BB3',
+          icon: 'experience',
+        },
+        {
+          label: 'Quality of Regulation',
+          score: '78',
+          width: '78%',
+          color: '#7E6BB3',
+          icon: 'regulation',
+        },
+        {
+          label: 'Incident History',
+          score: '85',
+          width: '85%',
+          color: '#7E6BB3',
+          icon: 'incident',
+        },
+        {
+          label: 'Business Information',
+          score: '80',
+          width: '80%',
+          color: '#7E6BB3',
+          icon: 'business',
+        },
+        {
+          label: 'Risk Assessment',
+          score: '70',
+          width: '70%',
+          color: '#FBC02D',
+          icon: 'risk',
+        },
+        {
+          label: 'Equipment Assessment',
+          score: '65',
+          width: '65%',
+          color: '#FBC02D',
+          icon: 'equipment',
+        },
+        {
+          label: 'Safety Sentiment',
+          score: '77',
+          width: '77%',
+          color: '#7E6BB3',
+          icon: 'sentiment',
+        },
+      ];
+
+  const incidents = analysis?.incidents ?? [
+    { date: 'Apr 12, 2025', severity: 'Minor', title: 'Mild altitude sickness reported', description: 'Trekking group experienced mild altitude sickness. Managed on site, no evacuation required.', source: 'Instagram' },
+    { date: 'Oct 3, 2023', severity: 'None', title: 'No incidents reported', description: 'No safety incidents found during this period.', source: 'Company Website' },
+    { date: 'May 21, 2021', severity: 'Moderate', title: 'Rescue delayed due to weather', description: 'Bad weather delayed rescue response by approximately 2 hours. No injuries were reported.', source: 'News Article' },
+  ];
+
+  const severityTextColor = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'none':
+        return 'text-[#000000]/60';
+      case 'moderate':
+        return 'text-[#FBC02D]';
+      case 'major':
+        return 'text-[#C51D14]';
+      default:
+        return 'text-[#7E6BB3]';
+    }
+  };
+
+  const incidentIcon = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'none':
+        return (
+          <div className="w-[30px] h-[30px] rounded-full bg-[#9AA0A6] flex items-center justify-center flex-shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+              <path d="M5 12l4 4L19 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        );
+      case 'moderate':
+        return (
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="flex-shrink-0">
+            <path d="M15 4L27 25H3L15 4Z" stroke="#FBC02D" strokeWidth="1.3" />
+            <path d="M15 11v7" stroke="#FBC02D" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="15" cy="21" r="1" fill="#FBC02D" />
+          </svg>
+        );
+      case 'major':
+        return (
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="flex-shrink-0">
+            <path d="M15 4L27 25H3L15 4Z" stroke="#C51D14" strokeWidth="1.3" />
+            <path d="M15 11v7" stroke="#C51D14" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="15" cy="21" r="1" fill="#C51D14" />
+          </svg>
+        );
+      default:
+        return (
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" className="flex-shrink-0">
+            <path d="M15 2.5L24 6V13.5C24 19.8 20 24.5 15 27C10 24.5 6 19.8 6 13.5V6L15 2.5Z" stroke="#7E6BB3" strokeWidth="1.5" />
+            <path d="M11 14.5L14 17.5L19.5 11" stroke="#7E6BB3" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        );
+    }
+  };
 
   useEffect(() => {
     if (!auth) {
@@ -191,6 +194,30 @@ function ResultsContent() {
 
     return () => unsubscribe();
   }, [router]);
+
+  useEffect(() => {
+    if (!authReady || !auth?.currentUser || consumedRef.current) return;
+
+    consumedRef.current = true;
+
+    (async () => {
+      try {
+        const token = await auth.currentUser!.getIdToken();
+        const res = await fetch('/api/user/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, action: 'consume' }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUserName(data.name || 'TRAVELLER');
+          setSearchesLeft(data.freeSearchesLeft ?? 3);
+        }
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      }
+    })();
+  }, [authReady]);
 
   if (!authReady) {
     return (
@@ -260,7 +287,12 @@ function ResultsContent() {
                 <span className="text-sm">→</span>
               </button>
 
-              <div className="relative w-9 h-9 rounded-full bg-[#F6F4FE] border border-[#C7B5F5] flex items-center justify-center text-[#7E6BB3] flex-shrink-0">
+              <button
+                type="button"
+                aria-label="Open profile sidebar"
+                onClick={() => setSidebarOpen(true)}
+                className="relative w-9 h-9 rounded-full bg-[#F6F4FE] border border-[#C7B5F5] flex items-center justify-center text-[#7E6BB3] flex-shrink-0 cursor-pointer hover:bg-[#EDE7FB] transition-colors"
+              >
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -276,7 +308,7 @@ function ResultsContent() {
                 </svg>
 
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#3D8A1E] ring-2 ring-white" />
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -316,6 +348,7 @@ function ResultsContent() {
             <button
               type="button"
               aria-label="Open profile sidebar"
+              onClick={() => setSidebarOpen(true)}
               className="absolute top-4 right-4 w-8 h-8 rounded-md bg-[#F6F4FE] border border-[#7E6BB3]/40 flex items-center justify-center text-[#7E6BB3] hover:bg-white hover:-translate-y-0.5 transition-all cursor-pointer"
             >
               <svg
@@ -595,18 +628,18 @@ function ResultsContent() {
 
               <div className="mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="font-poppins text-[55px] sm:text-[75px] leading-[60px] sm:leading-[78px] font-bold text-[#2B2740] tracking-tight">
-                  85 / 100
+                  {analysis?.overallSafetyScore ?? 85} / 100
                 </div>
 
                 <span className="h-[40px] min-w-[123px] px-4 rounded-lg bg-[#EDE7FB] text-[#7E6BB3] font-inter text-[20px] leading-[40px] text-center self-start sm:self-auto">
-                  Low Risk
+                  {analysis?.riskLevel ?? 'Low Risk'}
                 </span>
               </div>
 
               <div className="mt-4 w-full h-[18px] rounded-full bg-[#D9D9D9] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-[#7E6BB3]"
-                  style={{ width: '85%' }}
+                  style={{ width: analysis ? `${analysis.overallSafetyScore}%` : '85%' }}
                 />
               </div>
             </div>
@@ -649,7 +682,7 @@ function ResultsContent() {
                 </div>
 
                 <div className="font-poppins text-[55px] sm:text-[75px] leading-[60px] sm:leading-[78px] font-bold text-[#2B2740] tracking-tight">
-                  90%
+                  {analysis?.confidenceScore ?? 90}%
                 </div>
               </div>
 
@@ -679,10 +712,11 @@ function ResultsContent() {
             </div>
 
             <p className="mt-4 px-0 sm:px-2 font-inter text-[18px] sm:text-[22px] leading-[24px] sm:leading-[27px] font-normal text-[#2B2740] max-w-[1120px]">
-              {query} demonstrates strong safety practices overall. Guides are
-              well-qualified and emergency protocols are in place. We found no
-              major incidents in the past 3 years. Some traveller feedback
-              mention equipment maintenance inconsistencies on certain trips.
+              {analysis?.summary ??
+                `${query} demonstrates strong safety practices overall. Guides are
+                well-qualified and emergency protocols are in place. We found no
+                major incidents in the past 3 years. Some traveller feedback
+                mention equipment maintenance inconsistencies on certain trips.`}
             </p>
 
             <div className="mt-5 px-0 sm:px-2">
@@ -913,306 +947,72 @@ function ResultsContent() {
             {/* Mobile: each date stays with its corresponding incident.
                 Desktop: existing three-column layout remains unchanged. */}
             <div className="mt-4">
+              {/* Mobile */}
               <div className="md:hidden space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex items-start gap-3 w-[125px] flex-shrink-0">
-                    <svg
-                      width="30"
-                      height="30"
-                      viewBox="0 0 30 30"
-                      fill="none"
-                      className="flex-shrink-0"
-                    >
-                      <path
-                        d="M15 2.5L24 6V13.5C24 19.8 20 24.5 15 27C10 24.5 6 19.8 6 13.5V6L15 2.5Z"
-                        stroke="#7E6BB3"
-                        strokeWidth="1.5"
-                      />
-                      <path
-                        d="M11 14.5L14 17.5L19.5 11"
-                        stroke="#7E6BB3"
-                        strokeWidth="1.7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-
-                    <div>
-                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                        Apr 12, 2025
-                      </div>
-
-                      <div className="font-inter text-[14px] text-[#7E6BB3]">
-                        Minor
+                {incidents.map((inc, i) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <div className="flex items-start gap-3 w-[125px] flex-shrink-0">
+                      {incidentIcon(inc.severity)}
+                      <div>
+                        <div className="font-inter text-[16px] font-medium text-[#000000]/60">
+                          {inc.date}
+                        </div>
+                        <div className={`font-inter text-[14px] ${severityTextColor(inc.severity)}`}>
+                          {inc.severity}
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-inter text-[17px] leading-[22px] font-medium text-[#2B2740]">
-                      Mild altitude sickness reported
-                    </h3>
-
-                    <p className="mt-1 font-inter text-[14px] leading-[18px] text-[#000000]/75">
-                      Trekking group experienced mild altitude sickness.
-                      Managed on site, no evacuation required.
-                    </p>
-
-                    <span className="mt-2 block font-inter text-[13px] text-[#000000]/60">
-                      Source: Instagram
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex items-start gap-3 w-[125px] flex-shrink-0">
-                    <div className="w-[30px] h-[30px] rounded-full bg-[#9AA0A6] flex items-center justify-center flex-shrink-0">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="white"
-                        strokeWidth="2.5"
-                      >
-                        <path
-                          d="M5 12l4 4L19 6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-
-                    <div>
-                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                        Oct 3, 2023
-                      </div>
-
-                      <div className="font-inter text-[14px] text-[#000000]/60">
-                        None
-                      </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-inter text-[17px] leading-[22px] font-medium text-[#2B2740]">
+                        {inc.title}
+                      </h3>
+                      <p className="mt-1 font-inter text-[14px] leading-[18px] text-[#000000]/75">
+                        {inc.description}
+                      </p>
+                      <span className="mt-2 block font-inter text-[13px] text-[#000000]/60">
+                        Source: {inc.source}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-inter text-[17px] leading-[22px] font-medium text-[#2B2740]">
-                      No incidents reported
-                    </h3>
-
-                    <p className="mt-1 font-inter text-[14px] leading-[18px] text-[#000000]/75">
-                      No safety incidents found during this period.
-                    </p>
-
-                    <span className="mt-2 block font-inter text-[13px] text-[#000000]/60">
-                      Source: Company Website
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex items-start gap-3 w-[125px] flex-shrink-0">
-                    <svg
-                      width="30"
-                      height="30"
-                      viewBox="0 0 30 30"
-                      fill="none"
-                      className="flex-shrink-0"
-                    >
-                      <path
-                        d="M15 4L27 25H3L15 4Z"
-                        stroke="#C51D14"
-                        strokeWidth="1.3"
-                      />
-                      <path
-                        d="M15 11v7"
-                        stroke="#C51D14"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                      <circle cx="15" cy="21" r="1" fill="#C51D14" />
-                    </svg>
-
-                    <div>
-                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                        May 21, 2021
-                      </div>
-
-                      <div className="font-inter text-[14px] text-[#FBC02D]">
-                        Moderate
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-inter text-[17px] leading-[22px] font-medium text-[#2B2740]">
-                      Rescue delayed due to weather
-                    </h3>
-
-                    <p className="mt-1 font-inter text-[14px] leading-[18px] text-[#000000]/75">
-                      Bad weather delayed rescue response by approximately 2
-                      hours. No injuries were reported.
-                    </p>
-
-                    <span className="mt-2 block font-inter text-[13px] text-[#000000]/60">
-                      Source: News Article
-                    </span>
-                  </div>
-                </div>
+                ))}
               </div>
 
+              {/* Desktop */}
               <div className="hidden md:grid md:grid-cols-[155px_1px_minmax(0,1fr)] gap-5">
                 <div className="relative space-y-7">
-                  <div className="flex items-start gap-3">
-                    <svg
-                      width="30"
-                      height="30"
-                      viewBox="0 0 30 30"
-                      fill="none"
-                      className="flex-shrink-0"
-                    >
-                      <path
-                        d="M15 2.5L24 6V13.5C24 19.8 20 24.5 15 27C10 24.5 6 19.8 6 13.5V6L15 2.5Z"
-                        stroke="#7E6BB3"
-                        strokeWidth="1.5"
-                      />
-                      <path
-                        d="M11 14.5L14 17.5L19.5 11"
-                        stroke="#7E6BB3"
-                        strokeWidth="1.7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-
-                    <div>
-                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                        Apr 12, 2025
-                      </div>
-
-                      <div className="font-inter text-[14px] text-[#7E6BB3]">
-                        Minor
+                  {incidents.map((inc, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      {incidentIcon(inc.severity)}
+                      <div>
+                        <div className="font-inter text-[16px] font-medium text-[#000000]/60">
+                          {inc.date}
+                        </div>
+                        <div className={`font-inter text-[14px] ${severityTextColor(inc.severity)}`}>
+                          {inc.severity}
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="w-[30px] h-[30px] rounded-full bg-[#9AA0A6] flex items-center justify-center flex-shrink-0">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="white"
-                        strokeWidth="2.5"
-                      >
-                        <path
-                          d="M5 12l4 4L19 6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-
-                    <div>
-                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                        Oct 3, 2023
-                      </div>
-
-                      <div className="font-inter text-[14px] text-[#000000]/60">
-                        None
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <svg
-                      width="30"
-                      height="30"
-                      viewBox="0 0 30 30"
-                      fill="none"
-                      className="flex-shrink-0"
-                    >
-                      <path
-                        d="M15 4L27 25H3L15 4Z"
-                        stroke="#C51D14"
-                        strokeWidth="1.3"
-                      />
-                      <path
-                        d="M15 11v7"
-                        stroke="#C51D14"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                      <circle cx="15" cy="21" r="1" fill="#C51D14" />
-                    </svg>
-
-                    <div>
-                      <div className="font-inter text-[16px] font-medium text-[#000000]/60">
-                        May 21, 2021
-                      </div>
-
-                      <div className="font-inter text-[14px] text-[#FBC02D]">
-                        Moderate
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 <div className="w-px bg-[#2B2740]/15" />
 
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_150px] gap-3 lg:gap-6">
-                    <div className="lg:translate-x-5">
-                      <h3 className="font-inter text-[17px] sm:text-[18px] leading-[22px] font-medium text-[#2B2740]">
-                        Mild altitude sickness reported
-                      </h3>
-
-                      <p className="mt-1 font-inter text-[14px] sm:text-[15px] leading-[18px] text-[#000000]/75">
-                        Trekking group experienced mild altitude sickness.
-                        <br className="hidden sm:block" />
-                        Managed on site, no evacuation required.
-                      </p>
+                  {incidents.map((inc, i) => (
+                    <div key={i} className="grid grid-cols-1 lg:grid-cols-[1fr_150px] gap-3 lg:gap-6">
+                      <div className="lg:translate-x-5">
+                        <h3 className="font-inter text-[17px] sm:text-[18px] leading-[22px] font-medium text-[#2B2740]">
+                          {inc.title}
+                        </h3>
+                        <p className="mt-1 font-inter text-[14px] sm:text-[15px] leading-[18px] text-[#000000]/75">
+                          {inc.description}
+                        </p>
+                      </div>
+                      <span className="self-start lg:self-center font-inter text-[13px] sm:text-[14px] text-[#000000]/60">
+                        Source: {inc.source}
+                      </span>
                     </div>
-
-                    <span className="self-start lg:self-center font-inter text-[13px] sm:text-[14px] text-[#000000]/60">
-                      Source: Instagram
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_150px] gap-3 lg:gap-6">
-                    <div className="lg:translate-x-5">
-                      <h3 className="font-inter text-[17px] sm:text-[18px] leading-[22px] font-medium text-[#2B2740]">
-                        No incidents reported
-                      </h3>
-
-                      <p className="mt-1 font-inter text-[14px] sm:text-[15px] leading-[18px] text-[#000000]/75">
-                        No safety incidents found during this period.
-                      </p>
-                    </div>
-
-                    <span className="self-start lg:self-center font-inter text-[13px] sm:text-[14px] text-[#000000]/60">
-                      Source: Company Website
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_150px] gap-3 lg:gap-6">
-                    <div className="lg:translate-x-5">
-                      <h3 className="font-inter text-[17px] sm:text-[18px] leading-[22px] font-medium text-[#2B2740]">
-                        Rescue delayed due to weather
-                      </h3>
-
-                      <p className="mt-1 font-inter text-[14px] sm:text-[15px] leading-[18px] text-[#000000]/75">
-                        Bad weather delayed rescue response by approximately 2
-                        hours.
-                        <br className="hidden sm:block" />
-                        No injuries were reported.
-                      </p>
-                    </div>
-
-                    <span className="self-start lg:self-center font-inter text-[13px] sm:text-[14px] text-[#000000]/60">
-                      Source: News Article
-                    </span>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1580,6 +1380,22 @@ function ResultsContent() {
           </div>
         </section>
       </main>
+
+      <FreeSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        userName={userName}
+        freeSearchesLeft={searchesLeft}
+        companyName={query}
+        score={analysis?.overallSafetyScore}
+        previousSearches={[query, 'Summit Trails Expeditions', 'El Nido Island Hopping']}
+        onSelectSearch={(q) => router.push(`/analyze/results?q=${encodeURIComponent(q)}`)}
+        onUpgrade={() => router.push('/payments')}
+        onSignOut={async () => {
+          if (auth) await signOut(auth);
+          router.push('/signin');
+        }}
+      />
     </div>
   );
 }
