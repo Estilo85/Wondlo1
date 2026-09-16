@@ -152,12 +152,18 @@ interface HeroSectionProps {
   score?: number;
   operatorName?: string;
   ratingText?: string;
+  showVisuals?: boolean;
+  dashboardMessage?: string;
+  dashboardLayout?: boolean;
 }
 
 export default function HeroSection({
   score = 75,
   operatorName = 'Example Provider',
   ratingText = 'Good',
+  showVisuals = true,
+  dashboardMessage,
+  dashboardLayout = false,
 }: HeroSectionProps) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -248,25 +254,35 @@ export default function HeroSection({
               MAIN HERO GRID
           ====================================================== */}
           <div
-            className="
+            className={`
               grid
               grid-cols-1
               items-start
-              lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]
+              ${showVisuals ? 'lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]' : 'lg:grid-cols-1'}
               lg:gap-10
               xl:gap-14
-            "
+            `}
           >
 
             {/* =================================================
                 LEFT SIDE
             ================================================== */}
-            <div className="relative z-40 pt-1">
+            <div
+              className={`relative z-40 pt-1 ${
+                dashboardLayout ? 'mx-auto w-full max-w-[900px] text-center' : ''
+              }`}
+            >
 
               {/* =================================================
                   EYEBROW
               ================================================== */}
-              <div className="flex justify-center lg:justify-start">
+              <div
+                className={
+                  dashboardLayout
+                    ? 'flex justify-center'
+                    : 'flex justify-center lg:justify-start'
+                }
+              >
                 <div
                   className="
                     mb-5
@@ -323,7 +339,7 @@ export default function HeroSection({
                   H1
               ================================================== */}
               <h1
-                className="
+                className={`
                   m-0
                   text-center
                   text-[#29243F]
@@ -332,11 +348,11 @@ export default function HeroSection({
                   tracking-[-1.4px]
                   sm:text-[50px]
                   sm:tracking-[-1.8px]
-                  lg:text-left
+                  ${dashboardLayout ? 'lg:text-center' : 'lg:text-left'}
                   lg:text-[62px]
                   lg:leading-[1.03]
                   lg:tracking-[-2.4px]
-                "
+                `}
                 style={{
                   fontFamily: 'Poppins, sans-serif',
                   fontWeight: 730,
@@ -358,16 +374,15 @@ export default function HeroSection({
                   DESCRIPTION
               ================================================== */}
               <p
-                className="
+                className={`
                   mx-auto
                   mt-5
                   max-w-[590px]
                   text-center
                   text-[#625C70]
                   sm:mt-6
-                  lg:mx-0
-                  lg:text-left
-                "
+                  ${dashboardLayout ? 'lg:mx-auto lg:text-center' : 'lg:mx-0 lg:text-left'}
+                `}
                 style={{
                   fontFamily: 'Poppins, sans-serif',
                   fontSize: '18px',
@@ -381,11 +396,19 @@ export default function HeroSection({
                 {' '}website, or social media handle.
               </p>
 
+              {dashboardMessage && (
+                <p className={`mt-4 text-center font-inter text-sm text-[#806DB6] ${
+                  dashboardLayout ? 'lg:text-center' : 'lg:text-left'
+                }`}>
+                  {dashboardMessage}
+                </p>
+              )}
+
               {/* =================================================
                   SEARCH
               ================================================== */}
               <div
-                className="
+                className={`
                   mx-auto
                   mt-6
                   flex
@@ -402,11 +425,11 @@ export default function HeroSection({
                   shadow-[0_5px_18px_rgba(43,39,64,0.06)]
                   sm:mt-7
                   sm:min-h-[60px]
-                  lg:mx-0
+                  ${dashboardLayout ? '' : 'lg:mx-0'}
                   lg:max-w-none
-                  lg:w-[calc(100%+90px)]
+                  ${dashboardLayout ? 'lg:w-full' : 'lg:w-[calc(100%+90px)]'}
                   lg:flex-nowrap
-                "
+                `}
               >
 
                 {/* Search icon */}
@@ -551,7 +574,7 @@ export default function HeroSection({
                   ADVENTURE TYPE
               ================================================== */}
               <div
-                className="
+                className={`
                   relative
                   z-[99999]
                   mx-auto
@@ -559,19 +582,19 @@ export default function HeroSection({
                   w-full
                   max-w-[760px]
                   sm:mt-6
-                  lg:mx-0
+                  ${dashboardLayout ? '' : 'lg:mx-0'}
                   lg:max-w-none
-                  lg:w-[calc(100%+90px)]
-                "
+                  ${dashboardLayout ? 'lg:w-full' : 'lg:w-[calc(100%+90px)]'}
+                `}
               >
 
                 <div
-                  className="
+                  className={`
                     mb-3
                     text-center
                     text-[#514B63]
-                    lg:text-left
-                  "
+                    ${dashboardLayout ? 'lg:text-center' : 'lg:text-left'}
+                  `}
                   style={{
                     fontFamily: 'Inter, sans-serif',
                     fontSize: '15px',
@@ -586,7 +609,7 @@ export default function HeroSection({
                     VISIBLE CHIPS
                 ================================================== */}
                 <div
-                  className="
+                  className={`
                     flex
                     w-full
                     flex-wrap
@@ -595,10 +618,10 @@ export default function HeroSection({
                     gap-y-2
                     sm:gap-x-2
                     sm:gap-y-2.5
-                    lg:justify-start
+                    ${dashboardLayout ? 'lg:justify-center' : 'lg:justify-start'}
                     lg:gap-x-3
                     lg:gap-y-3
-                  "
+                  `}
                 >
                   {visibleChips.map((chip) => (
                     <span
@@ -752,6 +775,7 @@ export default function HeroSection({
             {/* =================================================
                 DESKTOP RIGHT SIDE
             ================================================== */}
+            {showVisuals && (
             <div className="relative mt-5 hidden min-h-[500px] lg:block">
 
               {/* =================================================
@@ -876,11 +900,13 @@ export default function HeroSection({
                 />
               </div>
             </div>
+            )}
           </div>
 
           {/* =====================================================
               MOBILE VISUAL
           ====================================================== */}
+          {showVisuals && (
           <div className="relative mt-8 block lg:hidden">
 
             {/* =================================================
@@ -977,6 +1003,7 @@ export default function HeroSection({
               />
             </div>
           </div>
+          )}
         </div>
       </section>
 

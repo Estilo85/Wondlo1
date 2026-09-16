@@ -29,7 +29,7 @@ export default function SignInPage() {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            window.location.href = '/';
+            window.location.href = '/dashboard';
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Invalid credentials.');
             setLoading(false);

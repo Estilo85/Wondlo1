@@ -25,7 +25,12 @@ export async function POST(req: Request) {
     }
 
     const isFeature = type === 'feature';
-    const typeLabel = isFeature ? 'Feature Request' : 'Bug Report';
+    const isSafetyHelp = type === 'safety-help';
+    const typeLabel = isFeature
+      ? 'Feature Request'
+      : isSafetyHelp
+        ? 'Safety Help Request'
+        : 'Bug Report';
     const typeLabelLower = typeLabel.toLowerCase();
     const categoryLabel = category || 'General';
     const priorityLabel = priority || 'Medium';

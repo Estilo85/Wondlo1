@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/lib/firebase-client';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { FaBug, FaTools } from 'react-icons/fa';
 import { jsPDF } from 'jspdf';
 
@@ -20,6 +20,15 @@ function ResultsContent() {
   const router = useRouter();
 
   const [authReady, setAuthReady] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    if (auth) {
+      await signOut(auth);
+    }
+
+    router.replace('/');
+  };
 
   const downloadSafetyQuestions = () => {
     const doc = new jsPDF({
@@ -161,6 +170,9 @@ function ResultsContent() {
 
     addTitle('Safety Questions to Ask an Adventure Operator');
 
+    addParagraph(`Adventure Operator: ${query}`);
+    addParagraph(`Generated: ${generatedDate}`);
+
     addSubtitle('Before You Book or Participate');
 
     addParagraph(
@@ -271,7 +283,7 @@ function ResultsContent() {
       'Remember: Asking these questions does not guarantee that an activity is safe. They are intended to help you make a more informed decision and identify areas where you may need further information before participating.'
     );
 
-    doc.save('Safety-questions-to-ask-an-adventure-operator.pdf');
+    doc.save('Wondlo-Recommended Questions.pdf');
   };
 
   const query = searchParams.get('q') || 'Summit Trails Expeditions';
@@ -487,7 +499,7 @@ function ResultsContent() {
               </nav>
 
               <button
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/dashboard')}
                 className="h-8 px-3 sm:px-4 rounded-lg bg-[#7E6BB3] text-white border border-[#7E6BB3] flex items-center gap-2 text-xs font-semibold transition-opacity hover:opacity-90 cursor-pointer whitespace-nowrap"
               >
                 <svg
@@ -513,22 +525,43 @@ function ResultsContent() {
                 <span className="text-sm">→</span>
               </button>
 
-              <div className="relative w-9 h-9 rounded-full bg-[#F6F4FE] border border-[#C7B5F5] flex items-center justify-center text-[#7E6BB3] flex-shrink-0">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  viewBox="0 0 24 24"
+              <div className="relative flex-shrink-0">
+                <button
+                  type="button"
+                  aria-label="Open profile menu"
+                  aria-expanded={profileOpen}
+                  onClick={() => setProfileOpen((open) => !open)}
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#C7B5F5] bg-[#F6F4FE] text-[#7E6BB3]"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z"
+                    />
+                  </svg>
 
-                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#3D8A1E] ring-2 ring-white" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#3D8A1E] ring-2 ring-white" />
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 top-11 z-50 w-32 rounded-lg border border-[#EDE7FB] bg-white p-1 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1759,7 +1792,7 @@ function ResultsContent() {
 
         <section className="w-full px-3 sm:px-0 py-2 sm:py-3 pb-0">
           <div
-            className="w-full max-w-[1316px] min-h-[210px] mx-auto rounded-t-xl rounded-b-none px-5 sm:px-8 py-5"
+            className="w-full max-w-[1316px] min-h-[520px] sm:min-h-[420px] xl:min-h-[260px] mx-auto rounded-t-xl rounded-b-none px-5 sm:px-8 py-5 flex flex-col"
             style={{
               background: 'rgba(126, 107, 179, 0.80)',
             }}
@@ -1835,7 +1868,7 @@ function ResultsContent() {
 
               <button
                 type="button"
-                onClick={() => router.push('/help')}
+                onClick={() => router.push('/safety-help')}
                 className="h-[55px] rounded-lg bg-[#EDE7FB] border border-[#2B2740]/5 flex items-center justify-center gap-3 font-inter text-[14px] sm:text-[16px] font-semibold text-[#2B2740] cursor-pointer hover:bg-white transition-colors"
               >
                 <span className="w-[25px] h-[25px] rounded-full border border-[#2B2740] flex items-center justify-center">
@@ -1874,7 +1907,7 @@ function ResultsContent() {
               </button>
             </div>
 
-            <div className="mt-5 border-t border-white/30 pt-5 flex flex-col md:flex-row items-center justify-between gap-5">
+            <div className="mt-5 flex flex-1 flex-col md:flex-row items-center justify-center md:justify-between gap-5 border-t border-white/30 pt-5">
               <p className="max-w-[330px] text-center md:text-left font-inter text-[14px] leading-[16px] font-normal text-white">
                 AI-assisted safety assessments based on publicly available
                 information. Should support—not replace—official travel

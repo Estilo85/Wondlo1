@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export default function Navbar() {
+export default function Navbar({
+  onAnalyseAnother,
+}: {
+  onAnalyseAnother?: () => void;
+}) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
@@ -43,6 +47,16 @@ export default function Navbar() {
           </Link>
         </div>
         <div className="flex items-center space-x-2">
+          {onAnalyseAnother && (
+            <button
+              type="button"
+              onClick={onAnalyseAnother}
+              className="hidden rounded-lg bg-[#7E6BB3] px-4 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 sm:block"
+            >
+              Analyse Another
+            </button>
+          )}
+
           {/* Sign In Button */}
           <Link
             href="/signin"
