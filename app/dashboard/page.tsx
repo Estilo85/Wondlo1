@@ -12,6 +12,9 @@ import { auth } from '@/lib/firebase-client';
 export default function DashboardPage() {
   const router = useRouter();
   const [hasPressedAnalyseAnother, setHasPressedAnalyseAnother] = useState(false);
+  const [hasPreviousSearches, setHasPreviousSearches] = useState(false);
+  const [searchesLeft, setSearchesLeft] = useState(3);
+  const [searchLimitMessage, setSearchLimitMessage] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const [authReady, setAuthReady] = useState(false);
 
@@ -31,6 +34,32 @@ export default function DashboardPage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  useEffect(() => {
+    if (!authReady || !auth?.currentUser) return;
+
+    (async () => {
+      try {
+        const token = await auth.currentUser!.getIdToken();
+        const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`);
+        if (response.ok) {
+          const data = await response.json();
+          const searches = data.searches ?? [];
+          setHasPreviousSearches(searches.length > 0);
+          setSearchesLeft(data.freeSearchesLeft ?? 3);
+
+          const isNewSearchRequest =
+            new URLSearchParams(window.location.search).get('newSearch') === '1';
+
+          if (searches[0]?.query && !isNewSearchRequest) {
+            router.replace(`/analyze/results?q=${encodeURIComponent(searches[0].query)}`);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load search history:', error);
+      }
+    })();
+  }, [authReady, router]);
 
   const handleSignOut = async () => {
     if (auth) {
@@ -71,7 +100,17 @@ export default function DashboardPage() {
 
             <button
               type="button"
-              onClick={() => setHasPressedAnalyseAnother(true)}
+                      onClick={() => {
+                        if (searchesLeft === 0) {
+                          setSearchLimitMessage(
+                            'You have reached your 3 free searches. Upgrade to analyse another adventure.'
+                          );
+                          return;
+                        }
+
+                        setHasPressedAnalyseAnother(true);
+                        setSearchLimitMessage('');
+                      }}
               className="flex h-8 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-[#7E6BB3] bg-[#7E6BB3] px-3 text-xs font-semibold text-white transition-opacity hover:opacity-90 sm:px-4"
             >
               <svg
@@ -141,10 +180,12 @@ export default function DashboardPage() {
           showVisuals={false}
           dashboardLayout
           dashboardMessage={
-            hasPressedAnalyseAnother
-              ? 'Ready to search again? Enter another adventure provider above.'
-              : "You haven't searched for an adventure yet. Start by searching above."
+            searchLimitMessage ||
+              (hasPressedAnalyseAnother || hasPreviousSearches
+                ? 'Ready to search again? Enter another adventure provider above.'
+                : "You haven't searched for an adventure yet. Start by searching above.")
           }
+          searchesRemaining={searchesLeft}
         />
       </main>
 

@@ -9,7 +9,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { jsPDF } from 'jspdf';
 import FreeSidebar from '@/components/FreeSidebar';
 import SidebarToggleButton from '@/components/SidebarToggleButton';
-import { generateMockAnalysis, type DimensionScores } from '@/lib/mock-analysis';
+import type { AnalysisReport, DimensionScores } from '@/lib/mock-analysis';
 
 const sectionStyle = {
   background: '#F6F4FE',
@@ -26,6 +26,9 @@ function ResultsContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userName, setUserName] = useState('TRAVELLER');
   const [searchesLeft, setSearchesLeft] = useState(3);
+  const [searchLimitMessage, setSearchLimitMessage] = useState('');
+  const [analysis, setAnalysis] = useState<AnalysisReport | null>(null);
+  const [savedAnalyses, setSavedAnalyses] = useState<AnalysisReport[]>([]);
   const consumedRef = useRef(false);
 
   const handleSignOut = async () => {
@@ -204,8 +207,6 @@ function ResultsContent() {
 
   const query = searchParams.get('q') || 'Summit Trails Expeditions';
 
-  const analysis = generateMockAnalysis(query);
-
   const today = new Date();
 
   const generatedDate = today.toLocaleDateString('en-US', {
@@ -371,25 +372,34 @@ function ResultsContent() {
     if (!authReady || !auth?.currentUser || consumedRef.current) return;
 
     consumedRef.current = true;
-
     (async () => {
       try {
         const token = await auth.currentUser!.getIdToken();
-        const res = await fetch('/api/user/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, action: 'consume' }),
-        });
+        const res = await fetch(`/api/search?token=${encodeURIComponent(token)}`);
         if (res.ok) {
           const data = await res.json();
           setUserName(data.name || 'TRAVELLER');
           setSearchesLeft(data.freeSearchesLeft ?? 3);
+          if (data.freeSearchesLeft === 0) {
+            setSearchLimitMessage(
+              'You have reached your 3 free searches. Upgrade to analyse another adventure.'
+            );
+          }
+          const reports = (data.searches ?? []).map(
+            (search: { analysis: AnalysisReport }) => search.analysis
+          );
+          setSavedAnalyses(reports);
+          const current = reports.find(
+            (report: AnalysisReport) =>
+              report.operatorName.trim().toLowerCase() === query.trim().toLowerCase()
+          );
+          setAnalysis(current ?? null);
         }
       } catch (error) {
-        console.error('Failed to load profile:', error);
+        console.error('Failed to load search history:', error);
       }
     })();
-  }, [authReady]);
+  }, [authReady, query]);
 
   if (!authReady) {
     return (
@@ -433,7 +443,16 @@ function ResultsContent() {
               </nav>
 
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => {
+                  if (searchesLeft === 0) {
+                    setSearchLimitMessage(
+                      'You have reached your 3 free searches. Upgrade to analyse another adventure.'
+                    );
+                    return;
+                  }
+
+                  router.push('/dashboard?newSearch=1');
+                }}
                 className="h-8 px-3 sm:px-4 rounded-lg bg-[#7E6BB3] text-white border border-[#7E6BB3] flex items-center gap-2 text-xs font-semibold transition-opacity hover:opacity-90 cursor-pointer whitespace-nowrap"
               >
                 <svg
@@ -518,6 +537,15 @@ function ResultsContent() {
           </div>
         </div>
       </header>
+
+      {searchLimitMessage && (
+        <div
+          role="alert"
+          className="mx-auto w-full max-w-[1316px] px-4 pt-3 text-center text-sm font-medium text-[#C51D14] sm:px-6 xl:px-0"
+        >
+          {searchLimitMessage}
+        </div>
+      )}
 
       <main className="w-full">
         {/* ================================================================
@@ -1572,16 +1600,14 @@ function ResultsContent() {
         onClose={() => setSidebarOpen(false)}
         userName={userName}
         freeSearchesLeft={searchesLeft}
-        companyName={query}
-        score={analysis?.overallSafetyScore}
-        incidentHistory={analysis?.incidents.map((incident) => `${incident.date}: ${incident.title}`).join(' | ')}
-        previousSearches={[query, 'Summit Trails Expeditions', 'El Nido Island Hopping']}
+        previousSearches={savedAnalyses.map((report) => report.operatorName)}
         onSelectSearch={(q) => router.push(`/analyze/results?q=${encodeURIComponent(q)}`)}
         onUpgrade={() => router.push('/payments')}
         onSignOut={async () => {
           if (auth) await signOut(auth);
           router.push('/signin');
         }}
+        savedAnalyses={savedAnalyses}
       />
     </div>
   );

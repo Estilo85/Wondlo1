@@ -8,6 +8,13 @@ import FreeSidebarHeaderSection from '@/components/FreeSidebarHeaderSection';
 import FreeSidebarSafetyCardSection from '@/components/FreeSidebarSafetyCardSection';
 import SafetyCardStateSection from '@/components/SafetyCardStateSection';
 
+interface SavedAnalysis {
+  operatorName: string;
+  overallSafetyScore: number;
+  riskLevel: string;
+  incidents: { date: string; title: string }[];
+}
+
 interface FreeSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,9 +24,7 @@ interface FreeSidebarProps {
   onSelectSearch?: (query: string) => void;
   onUpgrade?: () => void;
   onSignOut?: () => void;
-  companyName?: string;
-  score?: number;
-  incidentHistory?: string;
+  savedAnalyses?: SavedAnalysis[];
 }
 
 export default function FreeSidebar({
@@ -35,9 +40,7 @@ export default function FreeSidebar({
   onSelectSearch,
   onUpgrade,
   onSignOut,
-  companyName = 'Summit Trails Expeditions',
-  score,
-  incidentHistory = 'No incidents reported',
+  savedAnalyses = [],
 }: FreeSidebarProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [authenticatedUserName, setAuthenticatedUserName] = useState('');
@@ -196,15 +199,18 @@ export default function FreeSidebar({
           }}
         >
           <div className="w-[342px] flex flex-col items-center gap-5 py-5">
-            {/* Primary safety card */}
-            <FreeSidebarSafetyCardSection
-              companyName={companyName}
-              score={score}
-              incidentHistory={incidentHistory}
-            />
+            {savedAnalyses.slice(0, 3).map((savedAnalysis) => (
+              <FreeSidebarSafetyCardSection
+                key={savedAnalysis.operatorName}
+                companyName={savedAnalysis.operatorName}
+                score={savedAnalysis.overallSafetyScore}
+                incidentHistory={savedAnalysis.incidents
+                  .map((incident) => `${incident.date}: ${incident.title}`)
+                  .join(' | ')}
+              />
+            ))}
 
-            {/* Additional safety-card states */}
-            {Array.from({ length: 2 }).map((_, i) => (
+            {Array.from({ length: Math.max(0, 3 - savedAnalyses.length) }).map((_, i) => (
               <SafetyCardStateSection key={i} />
             ))}
           </div>

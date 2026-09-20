@@ -155,6 +155,7 @@ interface HeroSectionProps {
   showVisuals?: boolean;
   dashboardMessage?: string;
   dashboardLayout?: boolean;
+  searchesRemaining?: number;
 }
 
 export default function HeroSection({
@@ -164,6 +165,7 @@ export default function HeroSection({
   showVisuals = true,
   dashboardMessage,
   dashboardLayout = false,
+  searchesRemaining,
 }: HeroSectionProps) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -171,6 +173,7 @@ export default function HeroSection({
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isCardVisible, setIsCardVisible] = useState(true);
   const [query, setQuery] = useState('');
+  const [searchError, setSearchError] = useState('');
 
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const [morePopupTop, setMorePopupTop] = useState(0);
@@ -233,16 +236,36 @@ export default function HeroSection({
 
   const activeCard = cards[activeCardIndex];
 
-  const performSearch = () => {
+  const performSearch = async () => {
     const q = query.trim();
     if (!q) return;
+
+    if (searchesRemaining === 0) {
+      setSearchError('You have reached your 3 free searches. Upgrade to analyse another adventure.');
+      return;
+    }
 
     if (!auth?.currentUser) {
       router.push('/signin');
       return;
     }
 
-    router.push(`/analyze/results?q=${encodeURIComponent(q)}`);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, query: q }),
+      });
+
+      if (response.ok) {
+        router.push(`/analyze/results?q=${encodeURIComponent(q)}`);
+      } else if (response.status === 403) {
+        setSearchError('You have reached your 3 free searches. Upgrade to analyse another adventure.');
+      }
+    } catch (error) {
+      console.error('Search failed:', error);
+    }
   };
 
   return (
@@ -404,6 +427,12 @@ export default function HeroSection({
                 </p>
               )}
 
+
+              {searchError && (
+                <p className="mt-4 text-center font-inter text-sm font-medium text-[#C51D14]">
+                  {searchError}
+                </p>
+              )}
               {/* =================================================
                   SEARCH
               ================================================== */}
