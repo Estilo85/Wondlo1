@@ -39,7 +39,10 @@ export default function PaymentPageSection({
 
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <nav className="hidden items-center gap-8 text-xs font-semibold tracking-wide text-[#2B2740] md:flex">
-              <Link href="/" className="transition-colors hover:text-[#7E6BB3]">
+              <Link
+                href="/"
+                className="transition-colors hover:text-[#7E6BB3]"
+              >
                 HOME
               </Link>
 
@@ -71,9 +74,13 @@ export default function PaymentPageSection({
                 />
               </svg>
 
-              <span className="hidden sm:inline">Analyse Another Adventure</span>
+              <span className="hidden sm:inline">
+                Analyse Another Adventure
+              </span>
               <span className="sm:hidden">Analyse Another</span>
-              <span aria-hidden="true" className="text-sm">→</span>
+              <span aria-hidden="true" className="text-sm">
+                →
+              </span>
             </button>
 
             <div className="relative flex-shrink-0">
@@ -118,109 +125,237 @@ export default function PaymentPageSection({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1100px] px-6 py-12 pb-20 sm:py-16 sm:pb-24">
-
-        {/* Upgrade Pill Badge */}
-        <div className="mb-8 flex justify-center">
-          <div className="bg-[#7C63BD] text-white px-8 py-2.5 rounded-full text-xs font-extrabold tracking-widest uppercase shadow-xs">
-            UPGRADE
+      <main className="mx-auto w-full max-w-[1340px] px-4 py-10 pb-16 sm:px-6 sm:py-12 sm:pb-20 xl:px-0">
+        {/* ============================================================
+            UPGRADE HEADER
+            171 × 50
+        ============================================================ */}
+        <div className="mb-10 flex justify-center">
+          <div
+            className="flex h-[50px] w-[171px] items-center justify-center rounded-full"
+            style={{
+              background: 'rgba(126, 107, 179, 0.90)',
+              boxShadow: '0 6px 16px rgba(43, 39, 64, 0.10)',
+            }}
+          >
+            <span className="text-[20px] leading-[25px] font-bold text-white">
+              UPGRADE
+            </span>
           </div>
         </div>
 
-        {/* 3-Column Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+        {/* ============================================================
+            SUBSCRIPTIONS CONTAINER
+            1340 × 673
+        ============================================================ */}
+        <section
+          className="w-full min-h-[673px] rounded-[20px] px-8 pb-8 pt-10 sm:px-10 sm:pb-10 sm:pt-8 lg:px-[71px] lg:pb-[71px] lg:pt-12"
+          style={{
+            background: '#FAF9FE',
+            boxShadow: '0 12px 20px rgba(43, 39, 64, 0.06), 0 0 0 rgba(43, 39, 64, 0)',
+          }}
+        >
+          {/* ==========================================================
+              SUBSCRIPTION COLUMNS
+              380 × 530
+          ========================================================== */}
+          <div className="grid grid-cols-1 justify-center gap-8 md:grid-cols-2 xl:grid-cols-3 xl:gap-[40px]">
+            {/* ========================================================
+                FREE TRIAL
+            ======================================================== */}
+            <div
+              className="relative mx-auto flex h-[530px] w-full max-w-[380px] flex-col rounded-[20px]"
+              style={{
+                background: '#F6F4FE',
+                border: '1px solid #7E6BB3',
+                boxShadow: '0 6px 16px rgba(43, 39, 64, 0.05)',
+              }}
+            >
+              <div className="flex h-full flex-col items-center px-8 py-10">
+                {/* Subscription Label */}
+                <div
+                  className="flex h-[30px] w-[140px] items-center justify-center rounded-[20px]"
+                  style={{
+                    background: 'rgba(126, 107, 179, 0.90)',
+                    border: '0.5px solid #FFFFFF',
+                  }}
+                >
+                  <span className="text-[16px] leading-[20px] font-medium text-white">
+                    Free Trial
+                  </span>
+                </div>
 
-          {/* Card 1: Free Trial */}
-          <div className="bg-[#F6F4FE] border border-[#D5C3F9] rounded-[24px] p-8 flex flex-col justify-between shadow-xs relative">
-            <div className="space-y-6">
-              {/* Badge */}
-              <div className="flex justify-center">
-                <span className="bg-[#EBE2FE] text-[#7C63BD] border border-[#D5C3F9] px-4 py-1 rounded-full text-[11px] font-bold tracking-wider">
-                  Free Trial
-                </span>
+                {/* Price */}
+                <div className="mt-12 flex items-baseline justify-center">
+                  <span className="text-[60px] leading-[72px] font-bold text-[#2B2740]">
+                    0£
+                  </span>
+
+                  <span className="ml-0 text-[24px] leading-[30px] font-bold text-[#2B2740]">
+                    /Month
+                  </span>
+                </div>
+
+                {/* Features */}
+                <div className="mt-14 w-full text-center">
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    Three Searches
+                  </p>
+                </div>
               </div>
-              {/* Price */}
-              <div className="text-center pt-2">
-                <span className="text-5xl font-extrabold text-[#2B2740]">0£</span>
-                <span className="text-sm font-bold text-[#7C63BD]">/Month</span>
+            </div>
+
+            {/* ========================================================
+                PAY AS YOU GO
+            ======================================================== */}
+            <div
+              className="relative mx-auto flex h-[530px] w-full max-w-[380px] flex-col rounded-[20px]"
+              style={{
+                background: '#F6F4FE',
+                border: '1px solid #7E6BB3',
+                boxShadow: '0 10px 35px rgba(43, 39, 64, 0.05)',
+              }}
+            >
+              <div className="flex h-full flex-col items-center px-8 py-10">
+                {/* Subscription Label */}
+                <div
+                  className="flex h-[30px] w-[140px] items-center justify-center rounded-[20px]"
+                  style={{
+                    background: 'rgba(126, 107, 179, 0.90)',
+                    border: '0.5px solid #FFFFFF',
+                  }}
+                >
+                  <span className="text-[16px] leading-[20px] font-medium text-white">
+                    Pay As You Go
+                  </span>
+                </div>
+
+                {/* Price */}
+                <div className="mt-12 flex items-baseline justify-center">
+                  <span className="text-[60px] leading-[72px] font-bold text-[#2B2740]">
+                    3£
+                  </span>
+
+                  <span className="ml-0 text-[24px] leading-[30px] font-bold text-[#2B2740]">
+                    /Search
+                  </span>
+                </div>
+
+                {/* Features */}
+                <div className="mt-12 w-full space-y-4 text-center">
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    One Search
+                  </p>
+
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    Adventure Preparedness
+                  </p>
+
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    Safety Digest
+                  </p>
+
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    Operator Chat Diagnosis
+                  </p>
+                </div>
+
+                {/* PAY Button */}
+                <div className="mt-auto flex justify-center">
+                  <button
+                    type="button"
+                    onClick={onPayAsYouGo}
+                    className="flex h-[32px] w-[130px] items-center justify-center rounded-lg transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 cursor-pointer"
+                    style={{
+                      background: 'rgba(126, 107, 179, 0.90)',
+                      border: '0.5px solid #FFFFFF',
+                      boxShadow: '0 6px 16px rgba(43, 39, 64, 0.20)',
+                    }}
+                  >
+                    <span className="text-[20px] leading-[25px] font-medium text-white">
+                      PAY
+                    </span>
+                  </button>
+                </div>
               </div>
-              {/* Description */}
-              <div className="text-center text-xs font-semibold text-[#2B2740] pt-4">
-                Three Searches
+            </div>
+
+            {/* ========================================================
+                STARTER PLAN
+            ======================================================== */}
+            <div
+              className="relative mx-auto flex h-[530px] w-full max-w-[380px] flex-col rounded-[20px]"
+              style={{
+                background: '#F6F4FE',
+                border: '1px solid #7E6BB3',
+                boxShadow: '0 10px 35px rgba(43, 39, 64, 0.05)',
+              }}
+            >
+              <div className="flex h-full flex-col items-center px-8 py-10">
+                {/* Subscription Label */}
+                <div
+                  className="flex h-[30px] w-[140px] items-center justify-center rounded-[20px]"
+                  style={{
+                    background: 'rgba(126, 107, 179, 0.90)',
+                    border: '0.5px solid #FFFFFF',
+                  }}
+                >
+                  <span className="text-[16px] leading-[20px] font-medium text-white">
+                    Starter Plan
+                  </span>
+                </div>
+
+                {/* Price */}
+                <div className="mt-12 flex items-baseline justify-center">
+                  <span className="text-[60px] leading-[72px] font-bold text-[#2B2740]">
+                    15£
+                  </span>
+
+                  <span className="ml-0 text-[24px] leading-[30px] font-bold text-[#2B2740]">
+                    /Month
+                  </span>
+                </div>
+
+                {/* Features */}
+                <div className="mt-12 w-full space-y-4 text-center">
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    Seven Searches / Month
+                  </p>
+
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    Adventure Preparedness
+                  </p>
+
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    Safety Digest
+                  </p>
+
+                  <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
+                    Operator Chat Diagnosis
+                  </p>
+                </div>
+
+                {/* PAY Button */}
+                <div className="mt-auto flex justify-center">
+                  <button
+                    type="button"
+                    onClick={onStarterPlan}
+                    className="flex h-[32px] w-[130px] items-center justify-center rounded-lg transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 cursor-pointer"
+                    style={{
+                      background: 'rgba(126, 107, 179, 0.90)',
+                      border: '0.5px solid #FFFFFF',
+                      boxShadow: '0 6px 16px rgba(43, 39, 64, 0.20)',
+                    }}
+                  >
+                    <span className="text-[20px] leading-[25px] font-medium text-white">
+                      PAY
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Card 2: Pay As You Go */}
-          <div className="bg-[#F6F4FE] border border-[#D5C3F9] rounded-[24px] p-8 flex flex-col justify-between shadow-xs relative">
-            <div className="space-y-6">
-              {/* Badge */}
-              <div className="flex justify-center">
-                <span className="bg-[#EBE2FE] text-[#7C63BD] border border-[#D5C3F9] px-4 py-1 rounded-full text-[11px] font-bold tracking-wider">
-                  Pay As You Go
-                </span>
-              </div>
-              {/* Price */}
-              <div className="text-center pt-2">
-                <span className="text-5xl font-extrabold text-[#2B2740]">3£</span>
-                <span className="text-sm font-bold text-[#7C63BD]">/search</span>
-              </div>
-              {/* Features List */}
-              <div className="space-y-3 text-center text-xs font-semibold text-[#2B2740] pt-2">
-                <p>One Search</p>
-                <p>Adventure Preparedness</p>
-                <p>Safety Digest</p>
-                <p>Operator Chat Diagnosis</p>
-              </div>
-            </div>
-
-            {/* Pay Button */}
-            <div className="pt-8">
-              <button
-                onClick={onPayAsYouGo}
-                className="w-full bg-[#7C63BD] hover:bg-[#6B52A1] text-white font-extrabold text-xs py-3 rounded-xl transition-all shadow-xs tracking-wider cursor-pointer"
-              >
-                PAY
-              </button>
-            </div>
-          </div>
-
-          {/* Card 3: Starter Plan */}
-          <div className="bg-[#F6F4FE] border border-[#D5C3F9] rounded-[24px] p-8 flex flex-col justify-between shadow-xs relative">
-            <div className="space-y-6">
-              {/* Badge */}
-              <div className="flex justify-center">
-                <span className="bg-[#EBE2FE] text-[#7C63BD] border border-[#D5C3F9] px-4 py-1 rounded-full text-[11px] font-bold tracking-wider">
-                  Starter Plan
-                </span>
-              </div>
-              {/* Price */}
-              <div className="text-center pt-2">
-                <span className="text-5xl font-extrabold text-[#2B2740]">15£</span>
-                <span className="text-sm font-bold text-[#7C63BD]">/Month</span>
-              </div>
-              {/* Features List */}
-              <div className="space-y-3 text-center text-xs font-semibold text-[#2B2740] pt-2">
-                <p>Seven Searches / Month</p>
-                <p>Adventure Preparedness</p>
-                <p>Safety Digest</p>
-                <p>Operator Chat Diagnosis</p>
-              </div>
-            </div>
-
-            {/* Pay Button */}
-            <div className="pt-8">
-              <button
-                onClick={onStarterPlan}
-                className="w-full bg-[#7C63BD] hover:bg-[#6B52A1] text-white font-extrabold text-xs py-3 rounded-xl transition-all shadow-xs tracking-wider cursor-pointer"
-              >
-                PAY
-              </button>
-            </div>
-          </div>
-
-        </div>
-
+        </section>
       </main>
 
       <Footer />
