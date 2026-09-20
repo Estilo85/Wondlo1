@@ -20,19 +20,49 @@ export default function FreeSidebarSafetyCardSection({
   checklistItems?: { title: string; desc: string }[];
 }) {
   return (
-    <div className="w-[292px] max-w-[292px] rounded-[20px] border border-[#DDD6EA] bg-[#F7F5FD] p-4 shadow-[0_18px_45px_rgba(43,39,64,0.16)]">
-      <SafetyCardContent
-        card={{
-          score,
-          status,
-          provider: companyName,
-          details: checklistItems.map((item, index) => ({
-            label: item.title,
-            value: index === 0 ? incidentHistory : item.desc,
-          })),
+    <div
+      className="w-[342px] max-w-[342px] min-h-0 bg-[#F6F4FE] px-[25px] py-4"
+      style={{
+        scrollbarColor: 'rgba(126, 107, 179, 0.90) transparent',
+      }}
+    >
+      <div
+        className="w-[292px] max-w-[292px] rounded-[20px] p-4"
+        style={{
+          background: '#F6F4FE',
+          border: '0.15px solid rgba(43, 39, 64, 0.12)',
+          boxShadow: '0 18px 45px rgba(43, 39, 64, 0.08)',
         }}
-        desktop
-      />
+      >
+        <SafetyCardContent
+          card={{
+            score,
+            status,
+            provider: companyName,
+            details: checklistItems.map((item, index) => ({
+              label: item.title,
+              value: index === 0 ? incidentHistory : item.desc,
+            })),
+          }}
+          desktop
+        />
+      </div>
+
+      {/* Figma scrollbar styling */}
+      <style jsx>{`
+        div::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        div::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        div::-webkit-scrollbar-thumb {
+          background: rgba(126, 107, 179, 0.9);
+          border-radius: 9999px;
+        }
+      `}</style>
     </div>
   );
 }

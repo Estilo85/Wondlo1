@@ -3,7 +3,7 @@
 import SidebarToggleButton from '@/components/SidebarToggleButton';
 
 export default function FreeSidebarHeaderSection({
-  userName = 'BRYCE',
+  userName = '',
   freeSearchesLeft = 2,
   onViewPreviousSearches,
   onUpgrade,
@@ -15,48 +15,99 @@ export default function FreeSidebarHeaderSection({
   onUpgrade?: () => void;
   onClose?: () => void;
 }) {
-  const firstName = userName.trim().split(/\s+/)[0] || userName;
+  const firstName = userName.trim().split(/\s+/)[0] || '';
 
   return (
-    <div className="w-full max-w-[420px] bg-[#D7CCF8] p-6 space-y-4 font-poppins">
-
-      {/* 1. HELLO, BRYCE! Card */}
-      <div className="bg-white border border-[#BFAFF6] rounded-2xl p-5 flex items-center justify-between gap-3 shadow-xs">
-        <h1 className="text-xl font-bold tracking-tight uppercase text-[#2B2740]">
-          <span className="text-[#BFAFF6]">HELLO, </span>
-          <span className="text-[#6B52A1]">{firstName}</span>
-          <span className="text-[#6B52A1]">!</span>
-        </h1>
-
-        {onClose && <SidebarToggleButton isOpen onClick={onClose} />}
-      </div>
-
-      {/* 2. View Previous Searches Card */}
-      <div
-        onClick={onViewPreviousSearches}
-        className="bg-white border border-[#BFAFF6] rounded-2xl p-5 flex items-center justify-between shadow-xs cursor-pointer hover:bg-[#F9F7FF] transition-all"
-      >
-        <span className="text-base font-bold text-[#2B2740]">View Previous Searches</span>
-      </div>
-
-      {/* 3. Free Searches Left Card */}
-      <div className="bg-white border border-[#BFAFF6] rounded-2xl p-5 flex items-center justify-between shadow-xs">
-        <div className="space-y-1">
-          <h2 className="text-base font-extrabold text-[#2B2740]">
-            {freeSearchesLeft} Free Searches Left
-          </h2>
-          <p className="text-[11px] font-bold tracking-wider text-[#00897B] uppercase">
-            VALID ONLY FOR 30 DAYS
-          </p>
-        </div>
-        <button
-          onClick={onUpgrade}
-          className="bg-[#EBE2FE] hover:bg-[#D7CCF8] border border-[#A28BEE] text-[#A28BEE] font-extrabold text-xs px-5 py-3 rounded-xl transition-all cursor-pointer shadow-2xs tracking-wider"
+    <div
+      className="w-[342px] h-[235px] p-[6px] font-poppins"
+      style={{
+        background: 'rgba(199, 181, 245, 0.75)',
+        borderBottom: '1px solid #2B2740',
+      }}
+    >
+      <div className="w-full space-y-2">
+        {/* ============================================================
+            HEADER / HELLO USER
+        ============================================================ */}
+        <div
+          className="w-[330px] h-[70px] px-5 rounded-xl flex items-center justify-between gap-4"
+          style={{
+            background: '#F6F4FE',
+            boxShadow: '0 6px 18px rgba(43, 39, 64, 0.15)',
+          }}
         >
-          UPGRADE
-        </button>
-      </div>
+          <h1
+            className="text-[22px] leading-[25px] font-bold tracking-tight uppercase"
+            style={{
+              background:
+                'linear-gradient(90deg, #C7B5F5 50%, #2B2740 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            HELLO, {firstName}!
+          </h1>
 
+          {onClose && (
+            <SidebarToggleButton
+              isOpen
+              onClick={onClose}
+            />
+          )}
+        </div>
+
+        {/* ============================================================
+            PREVIOUS SEARCHES
+        ============================================================ */}
+        <button
+          type="button"
+          onClick={onViewPreviousSearches}
+          className="w-[330px] h-[55px] px-5 rounded-xl flex items-center text-left transition-all duration-200 hover:shadow-sm cursor-pointer"
+          style={{
+            background: '#F6F4FE',
+          }}
+        >
+          <span className="text-[14px] leading-[18px] font-semibold text-[#000000]">
+            View Previous Searches
+          </span>
+        </button>
+
+        {/* ============================================================
+            SUBSCRIPTION AREA
+        ============================================================ */}
+        <div
+          className="w-[330px] h-[55px] px-5 rounded-xl flex items-center justify-between gap-4"
+          style={{
+            background: '#F6F4FE',
+          }}
+        >
+          <div className="flex flex-col justify-center min-w-0">
+            <h2 className="text-[14px] leading-[17px] font-semibold text-[#000000] whitespace-nowrap">
+              {freeSearchesLeft} Free Searches Left
+            </h2>
+
+            <p className="mt-0.5 text-[10px] leading-[12px] font-semibold tracking-wide text-[#196469] uppercase whitespace-nowrap">
+              VALID ONLY FOR 30 DAYS
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onUpgrade}
+            className="w-[97px] h-[28px] flex-shrink-0 rounded-md flex items-center justify-center transition-all duration-200 hover:bg-white hover:-translate-y-0.5 cursor-pointer"
+            style={{
+              background: 'rgba(199, 181, 245, 0.75)',
+              border: '0.5px solid #196469',
+              boxShadow: '0 3px 8px rgba(43, 39, 64, 0.10)',
+            }}
+          >
+            <span className="text-[14px] leading-[18px] font-semibold text-[#2B2740]/75">
+              UPGRADE
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
