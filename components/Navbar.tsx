@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -10,15 +9,9 @@ export default function Navbar({
   onAnalyseAnother?: () => void;
 }) {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isHome = mounted && pathname === '/';
-  const isSignIn = mounted && pathname === '/signin';
-  const isSignUp = mounted && (pathname === '/signup' || (!isSignIn && !isHome));
+  const isHome = pathname === '/';
+  const isSignIn = pathname === '/signin';
+  const isSignUp = pathname === '/signup' || (!isSignIn && !isHome);
 
   return (
     <nav className="w-full bg-white border-b border-[#EDE7FB] py-4 px-6 sm:px-12 flex items-center justify-between">

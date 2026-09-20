@@ -58,10 +58,11 @@ export async function POST(req: Request) {
       freeSearchesLeft: Math.max(0, FREE_SEARCH_LIMIT - user.freeSearchesUsed),
       limited: user.freeSearchesUsed >= FREE_SEARCH_LIMIT,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Profile route error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     );
   }

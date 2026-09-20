@@ -32,10 +32,11 @@ export async function POST(req: Request) {
     let firebaseUser;
     try {
       firebaseUser = await createFirebaseUser(email, name);
-    } catch (fbError: any) {
+    } catch (fbError: unknown) {
       console.error('Firebase creation failed:', fbError);
+      const message = fbError instanceof Error ? fbError.message : 'Failed to create user in Firebase.';
       return NextResponse.json(
-        { error: fbError.message || 'Failed to create user in Firebase.' },
+        { error: message },
         { status: 400 }
       );
     }
@@ -71,16 +72,17 @@ export async function POST(req: Request) {
           </div>
         `,
       });
-    } catch (emailError: any) {
+    } catch (emailError: unknown) {
       console.error('Resend email failed:', emailError);
       emailStatus = 'failed';
     }
 
     return NextResponse.json({ success: true, user: newUser, emailStatus }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Signup route crashed:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     );
   }

@@ -1,8 +1,6 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 
-let firebaseApp: App;
-
 function initializeFirebaseAdmin(): App {
   const existingApps = getApps();
   if (existingApps.length > 0) {
@@ -26,7 +24,7 @@ function initializeFirebaseAdmin(): App {
   });
 }
 
-firebaseApp = initializeFirebaseAdmin();
+const firebaseApp = initializeFirebaseAdmin();
 export const adminAuth: Auth = getAuth(firebaseApp);
 
 export async function createFirebaseUser(email: string, displayName: string) {
@@ -37,9 +35,9 @@ export async function createFirebaseUser(email: string, displayName: string) {
       emailVerified: false,
     });
     return userRecord;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Firebase create user error:', error);
-    throw new Error(error?.message || 'Error creating user in Firebase.');
+    throw new Error(error instanceof Error ? error.message : 'Error creating user in Firebase.');
   }
 }
 
@@ -55,8 +53,8 @@ export async function updateFirebasePassword(email: string, newPassword: string)
     });
 
     return { success: true, uid: userRecord.uid };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Firebase password update error:', error);
-    throw new Error(error?.message || 'Unable to update Firebase password.');
+    throw new Error(error instanceof Error ? error.message : 'Unable to update Firebase password.');
   }
 }

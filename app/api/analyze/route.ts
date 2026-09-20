@@ -85,8 +85,9 @@ Return a valid JSON object ONLY with no markdown code blocks or extra text, matc
     const analysisData = JSON.parse(jsonText);
     return NextResponse.json(analysisData);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Analysis Engine Error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to process adventure analysis' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to process adventure analysis';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

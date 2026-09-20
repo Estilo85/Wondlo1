@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 interface Testimonial {
   id: number;
   quote: string;
@@ -70,9 +72,12 @@ export default function Testimonials() {
 
                   <div className="flex items-end justify-between pt-3 border-t border-[#F6F4FE]">
                     <div className="flex items-center space-x-2.5">
-                      <img
+                      <Image
                         src={item.avatar}
                         alt={item.name}
+                        width={32}
+                        height={32}
+                        unoptimized
                         className="w-8 h-8 rounded-full object-cover border border-[#EDE7FB]"
                       />
 

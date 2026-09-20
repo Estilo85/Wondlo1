@@ -56,8 +56,8 @@ function SetPasswordForm() {
       setTimeout(() => {
         router.push('/');
       }, 2500);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to set password.');
     } finally {
       setLoading(false);
     }

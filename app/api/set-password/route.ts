@@ -25,10 +25,11 @@ export async function POST(req: Request) {
     await updateFirebasePassword(email, password);
 
     return NextResponse.json({ success: true, message: 'Password successfully updated.' }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Set password error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     );
   }

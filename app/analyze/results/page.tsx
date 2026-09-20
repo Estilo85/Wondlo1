@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,7 +9,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { jsPDF } from 'jspdf';
 import FreeSidebar from '@/components/FreeSidebar';
 import SidebarToggleButton from '@/components/SidebarToggleButton';
-import { generateMockAnalysis, type AnalysisReport, type DimensionScores } from '@/lib/mock-analysis';
+import { generateMockAnalysis, type DimensionScores } from '@/lib/mock-analysis';
 
 const sectionStyle = {
   background: '#F6F4FE',
@@ -204,10 +204,7 @@ function ResultsContent() {
 
   const query = searchParams.get('q') || 'Summit Trails Expeditions';
 
-  const analysis = useMemo(
-    () => generateMockAnalysis(query),
-    [query]
-  );
+  const analysis = generateMockAnalysis(query);
 
   const today = new Date();
 

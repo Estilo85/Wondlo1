@@ -108,16 +108,17 @@ export async function POST(req: Request) {
           </div>
         `,
       });
-    } catch (emailError: any) {
+    } catch (emailError: unknown) {
       console.error('Resend email failed:', emailError);
       emailStatus = 'failed';
     }
 
     return NextResponse.json({ success: true, emailStatus }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Report route crashed:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     );
   }

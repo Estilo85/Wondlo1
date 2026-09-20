@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
 import Link from 'next/link';
@@ -9,6 +10,7 @@ import Footer from '@/components/Footer';
 import { FaUserFriends } from 'react-icons/fa';
 
 export default function SignInPage() {
+    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -29,7 +31,7 @@ export default function SignInPage() {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            window.location.href = '/dashboard';
+            router.push('/dashboard');
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Invalid credentials.');
             setLoading(false);
