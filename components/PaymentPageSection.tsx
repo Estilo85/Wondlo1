@@ -264,7 +264,11 @@ export default function PaymentPageSection({
                 <div className="mt-auto flex justify-center">
                   <button
                     type="button"
-                    onClick={onPayAsYouGo}
+                    onClick={() =>
+                      onPayAsYouGo
+                        ? onPayAsYouGo()
+                        : router.push('/checkout?plan=pay-as-you-go')
+                    }
                     className="flex h-[32px] w-[130px] items-center justify-center rounded-lg transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 cursor-pointer"
                     style={{
                       background: 'rgba(126, 107, 179, 0.90)',
@@ -339,7 +343,11 @@ export default function PaymentPageSection({
                 <div className="mt-auto flex justify-center">
                   <button
                     type="button"
-                    onClick={onStarterPlan}
+                    onClick={() =>
+                      onStarterPlan
+                        ? onStarterPlan()
+                        : router.push('/checkout?plan=starter')
+                    }
                     className="flex h-[32px] w-[130px] items-center justify-center rounded-lg transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 cursor-pointer"
                     style={{
                       background: 'rgba(126, 107, 179, 0.90)',
