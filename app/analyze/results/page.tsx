@@ -8,6 +8,7 @@ import { auth } from '@/lib/firebase-client';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { jsPDF } from 'jspdf';
 import FreeSidebar from '@/components/FreeSidebar';
+import PaidSidebar from '@/components/PaidSidebar';
 import SidebarToggleButton from '@/components/SidebarToggleButton';
 import type { AnalysisReport, DimensionScores } from '@/lib/mock-analysis';
 
@@ -25,7 +26,9 @@ function ResultsContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userName, setUserName] = useState('TRAVELLER');
+  const [isPaid, setIsPaid] = useState(false);
   const [searchesLeft, setSearchesLeft] = useState(3);
+  const [paidSearchesLeft, setPaidSearchesLeft] = useState(7);
   const [searchLimitMessage, setSearchLimitMessage] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisReport | null>(null);
   const [savedAnalyses, setSavedAnalyses] = useState<AnalysisReport[]>([]);
@@ -241,7 +244,7 @@ function ResultsContent() {
   const riskItems = analysis
     ? dimensionList.map(({ key, label, icon }) => {
         const score = Number(analysis.dimensions[key]) || 0;
-        const color = score >= 75 ? '#7E6BB3' : '#FBC02D';
+        const color = score < 50 ? '#C51D14' : score < 75 ? '#FBC02D' : '#7E6BB3';
         return { label, score: String(score), width: `${score}%`, color, icon };
       })
     : [
@@ -379,10 +382,14 @@ function ResultsContent() {
         if (res.ok) {
           const data = await res.json();
           setUserName(data.name || 'TRAVELLER');
-          setSearchesLeft(data.freeSearchesLeft ?? 3);
-          if (data.freeSearchesLeft === 0) {
+          setIsPaid(data.isPaid === true);
+          setSearchesLeft(data.searchesLeft ?? data.freeSearchesLeft ?? 3);
+          setPaidSearchesLeft(data.paidSearchesLeft ?? 7);
+          if (data.limited) {
             setSearchLimitMessage(
-              'You have reached your 3 free searches. Upgrade to analyse another adventure.'
+              data.isPaid
+                ? 'You have reached your 7 monthly searches.'
+                : 'You have reached your 3 free searches. Upgrade to analyse another adventure.'
             );
           }
           const reports = (data.searches ?? []).map(
@@ -446,7 +453,9 @@ function ResultsContent() {
                 onClick={() => {
                   if (searchesLeft === 0) {
                     setSearchLimitMessage(
-                      'You have reached your 3 free searches. Upgrade to analyse another adventure.'
+                      isPaid
+                        ? 'You have reached your 7 monthly searches.'
+                        : 'You have reached your 3 free searches. Upgrade to analyse another adventure.'
                     );
                     return;
                   }
@@ -1595,20 +1604,36 @@ function ResultsContent() {
         </section>
       </main>
 
-      <FreeSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        userName={userName}
-        freeSearchesLeft={searchesLeft}
-        previousSearches={savedAnalyses.map((report) => report.operatorName)}
-        onSelectSearch={(q) => router.push(`/analyze/results?q=${encodeURIComponent(q)}`)}
-        onUpgrade={() => router.push('/payments')}
-        onSignOut={async () => {
-          if (auth) await signOut(auth);
-          router.push('/signin');
-        }}
-        savedAnalyses={savedAnalyses}
-      />
+      {isPaid ? (
+        <PaidSidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          userName={userName}
+          paidSearchesLeft={paidSearchesLeft}
+          previousSearches={savedAnalyses.map((report) => report.operatorName)}
+          onSelectSearch={(q) => router.push(`/analyze/results?q=${encodeURIComponent(q)}`)}
+          onSignOut={async () => {
+            if (auth) await signOut(auth);
+            router.push('/signin');
+          }}
+          savedAnalyses={savedAnalyses}
+        />
+      ) : (
+        <FreeSidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          userName={userName}
+          freeSearchesLeft={searchesLeft}
+          previousSearches={savedAnalyses.map((report) => report.operatorName)}
+          onSelectSearch={(q) => router.push(`/analyze/results?q=${encodeURIComponent(q)}`)}
+          onUpgrade={() => router.push('/payments')}
+          onSignOut={async () => {
+            if (auth) await signOut(auth);
+            router.push('/signin');
+          }}
+          savedAnalyses={savedAnalyses}
+        />
+      )}
     </div>
   );
 }

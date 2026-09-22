@@ -10,7 +10,9 @@ const PLANS = {
     name: 'Pay As You Go',
     price: 3.0,
     priceLabel: '£3',
-    cadence: '/search',
+    cadence: '/Search',
+    cadence2: '/Search',
+    paymentLink: 'https://buy.stripe.com/7sY00j64s5NKdd50aLcfK07',
     features: [
       'One Search',
       'Adventure Preparedness',
@@ -22,9 +24,10 @@ const PLANS = {
     name: 'Starter Plan',
     price: 15.0,
     priceLabel: '£15',
-    cadence: '/month',
+    cadence: '/Month',
+    paymentLink: 'https://buy.stripe.com/5kQeVddwUdgc8WPf5FcfK08',
     features: [
-      'Seven Searches / Month',
+      'Seven Searches /Month',
       'Adventure Preparedness',
       'Safety Digest',
       'Operator Chat Diagnosis',
@@ -72,7 +75,7 @@ function luhnValid(cardNumber: string) {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-[#EDE7FB] bg-white px-4 py-3 font-inter text-sm text-[#2B2740] outline-none transition-all duration-200 placeholder:text-[#9A95A8] focus:border-[#7E6BB3] focus:ring-2 focus:ring-[#EDE7FB]';
+  'w-full rounded-lg border border-[#EDE7FB] bg-[#F9F7FE] px-4 py-3 font-inter text-sm text-[#2B2740] outline-none transition-all duration-200 placeholder:text-[#9A95A8] focus:border-[#7E6BB3] focus:ring-2 focus:ring-[#EDE7FB]';
 
 function CheckoutContent() {
   const router = useRouter();
@@ -133,19 +136,8 @@ function CheckoutContent() {
     e.preventDefault();
     if (status === 'processing' || !validate()) return;
 
-    const declined = cardNumber.replace(/\D/g, '').endsWith('0002');
     setStatus('processing');
-
-    setTimeout(() => {
-      if (declined) {
-        setStatus('declined');
-        return;
-      }
-      setOrderRef(
-        `WL-${Math.random().toString(36).slice(2, 8).toUpperCase()}${Date.now().toString().slice(-4)}`
-      );
-      setStatus('success');
-    }, 2200);
+    window.location.assign(plan.paymentLink);
   };
 
   if (status === 'success') {
@@ -192,6 +184,7 @@ function CheckoutContent() {
             <h1 className="text-2xl font-bold text-[#2B2740]">
               Payment successful
             </h1>
+            <div className="mx-auto my-5 h-[2px] w-[100px] bg-gradient-to-r from-[#7E6BB3] to-[#2B2740]" />
 
             <p className="mt-3 font-inter text-sm leading-relaxed text-[#4A4560]">
               Thank you! Your <strong>{plan.name}</strong> is active at{' '}
@@ -271,26 +264,31 @@ function CheckoutContent() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr]">
           <div
-            className="order-2 lg:order-1 rounded-3xl p-6 sm:p-8"
+            className="order-1 lg:order-1 rounded-3xl p-6 sm:p-8"
             style={{
-              backgroundColor: '#F6F4FE',
-              border: '0.1px solid rgba(43, 39, 64, 0.10)',
+              background: 'linear-gradient(315deg, #EDE7FB 25%, rgba(199, 181, 245, 0.75) 100%)',
               boxShadow: '0 8px 30px rgba(43, 39, 64, 0.20)',
             }}
           >
-            <h2 className="text-lg font-bold text-[#2B2740]">Order summary</h2>
+            <h2 className="text-lg font-bold text-[#2B2740]">Order Summary</h2>
+            <div className="my-5 h-[2px] w-[100px] bg-gradient-to-r from-[#7E6BB3] to-[#2B2740]" />
 
-            <div className="mt-4 flex items-center justify-between rounded-xl bg-[#FCFCFB] p-4" style={{ border: '0.1px solid rgba(43, 39, 64, 0.10)' }}>
+            <div
+              className="mt-4 flex items-center justify-between rounded-xl p-4 transition-transform duration-200 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(43,39,64,0.18)]"
+              style={{
+                background: 'linear-gradient(135deg, #EDE7FB 25%, rgba(199, 181, 245, 0.75) 100%)',
+              }}
+            >
               <div>
                 <p className="font-semibold text-[#2B2740]">{plan.name}</p>
                 <p className="mt-1 font-inter text-xs text-[#4A4560]">
-                  Billed {plan.cadence === '/month' ? 'monthly' : 'per search'}
+                  Billed {plan.cadence === '/Month' ? 'monthly' : 'per search'}
                 </p>
               </div>
 
               <p className="text-2xl font-bold text-[#2B2740]">
                 {plan.priceLabel}
-                <span className="text-sm font-medium text-[#4A4560]">
+                <span className="text-sm font-medium text-[#2B2740]">
                   {plan.cadence}
                 </span>
               </p>
@@ -299,13 +297,16 @@ function CheckoutContent() {
             <ul className="mt-4 space-y-3">
               {plan.features.map((feature) => (
                 <li key={feature} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#3D8A1E]/15">
-                    <svg className="h-3 w-3 text-[#3D8A1E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <span
+                    className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                    style={{ background: 'linear-gradient(180deg, #EDE7FB 0%, rgba(199, 181, 245, 0.75) 100%)' }}
+                  >
+                    <svg className="h-3 w-3 text-[#7E6BB3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12.5l4 4L19 7" />
                     </svg>
                   </span>
 
-                  <span className="font-inter text-sm text-[#4A4560]">
+                  <span className="font-inter text-sm text-[#2B2740]">
                     {feature}
                   </span>
                 </li>
@@ -322,7 +323,7 @@ function CheckoutContent() {
                 <span>Included</span>
               </div>
               <div className="mt-2 flex justify-between font-poppins font-semibold text-[#2B2740]">
-                <span>Total due today</span>
+                <span>Total Due Today</span>
                 <span>
                   {plan.priceLabel}
                   {plan.cadence}
@@ -332,14 +333,15 @@ function CheckoutContent() {
           </div>
 
           <div
-            className="order-1 lg:order-2 rounded-3xl p-6 sm:p-8"
+            className="order-2 lg:order-2 rounded-3xl p-6 sm:p-8"
             style={{
               backgroundColor: '#F6F4FE',
               border: '0.1px solid rgba(43, 39, 64, 0.10)',
               boxShadow: '0 8px 30px rgba(43, 39, 64, 0.20)',
             }}
           >
-            <h1 className="text-lg font-bold text-[#2B2740]">Payment details</h1>
+            <h1 className="text-lg font-bold text-[#2B2740]">Payment Details</h1>
+            <div className="my-5 h-[2px] w-[100px] bg-gradient-to-r from-[#7E6BB3] to-[#2B2740]" />
 
             <form onSubmit={handlePay} className="mt-6 space-y-5" noValidate>
               <div>
@@ -471,7 +473,8 @@ function CheckoutContent() {
               <button
                 type="submit"
                 disabled={status === 'processing'}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#7E6BB3] text-xs font-semibold text-white transition-colors hover:bg-[#68559D] disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                style={{ background: 'linear-gradient(90deg, #7E6BB3 0%, rgba(43, 39, 64, 0.90) 100%)' }}
               >
                 {status === 'processing' ? (
                   <>
@@ -484,13 +487,13 @@ function CheckoutContent() {
                 ) : (
                   <>
                     Pay {plan.priceLabel}
-                    {plan.cadence === '/month' ? ' today' : ` ${plan.cadence}`}
+                    {plan.cadence === '/Month' ? ' Now' : ' / Search'}
                   </>
                 )}
               </button>
 
-              <div className="flex items-center justify-center gap-2 pt-1 font-inter text-xs text-[#4A4560]">
-                <svg className="h-4 w-4 text-[#3D8A1E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div className="flex items-center justify-center gap-2 pt-1 font-inter text-xs text-[#7E6BB3]">
+                <svg className="h-4 w-4 text-[#7E6BB3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="11" width="18" height="11" rx="2" />
                   <path d="M7 11V7a5 5 0 0110 0v4" />
                 </svg>

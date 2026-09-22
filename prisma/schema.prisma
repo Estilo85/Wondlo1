@@ -13,6 +13,7 @@ model User {
   firebaseId      String?  @unique
   name            String
   email           String   @unique
+  isPaid          Boolean  @default(false)
   freeSearchesUsed Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

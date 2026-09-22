@@ -6,18 +6,39 @@ import { generateMockAnalysis } from '@/lib/mock-analysis';
 export const runtime = 'nodejs';
 
 const FREE_SEARCH_LIMIT = 3;
+const PAID_SEARCH_LIMIT = 7;
+
+function monthStart() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+async function clearPreviousMonthSearches(userId: string) {
+  await prisma.search.deleteMany({
+    where: {
+      userId,
+      createdAt: { lt: monthStart() },
+    },
+  });
+}
 
 async function getUser(token: string) {
   const decoded = await adminAuth.verifyIdToken(token);
   return prisma.user.findUnique({ where: { firebaseId: decoded.uid } });
 }
 
-function responseForUser(user: { name: string }, freeSearchesUsed: number) {
+function responseForUser(user: { name: string; isPaid: boolean }, searchesUsed: number) {
+  const searchLimit = user.isPaid ? PAID_SEARCH_LIMIT : FREE_SEARCH_LIMIT;
+
   return {
     name: user.name,
-    freeSearchesUsed,
-    freeSearchesLeft: Math.max(0, FREE_SEARCH_LIMIT - freeSearchesUsed),
-    limited: freeSearchesUsed >= FREE_SEARCH_LIMIT,
+    isPaid: user.isPaid,
+    searchesUsed,
+    searchesLeft: Math.max(0, searchLimit - searchesUsed),
+    freeSearchesUsed: searchesUsed,
+    freeSearchesLeft: Math.max(0, FREE_SEARCH_LIMIT - searchesUsed),
+    paidSearchesLeft: Math.max(0, PAID_SEARCH_LIMIT - searchesUsed),
+    limited: searchesUsed >= searchLimit,
   };
 }
 
@@ -28,11 +49,12 @@ export async function GET(req: Request) {
 
     const user = await getUser(token);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    await clearPreviousMonthSearches(user.id);
 
     const searches = await prisma.search.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
-      take: FREE_SEARCH_LIMIT,
+      take: user.isPaid ? PAID_SEARCH_LIMIT : FREE_SEARCH_LIMIT,
     });
     const searchesUsed = searches.length;
 
@@ -60,6 +82,7 @@ export async function POST(req: Request) {
 
     const user = await getUser(token);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    await clearPreviousMonthSearches(user.id);
 
     const queryKey = normalizedQuery.toLowerCase();
     const existing = await prisma.search.findUnique({
@@ -75,8 +98,9 @@ export async function POST(req: Request) {
     }
 
     const searchesUsed = await prisma.search.count({ where: { userId: user.id } });
-    if (searchesUsed >= FREE_SEARCH_LIMIT) {
-      return NextResponse.json({ ...responseForUser(user, searchesUsed), error: 'Free search limit reached' }, { status: 403 });
+    const searchLimit = user.isPaid ? PAID_SEARCH_LIMIT : FREE_SEARCH_LIMIT;
+    if (searchesUsed >= searchLimit) {
+      return NextResponse.json({ ...responseForUser(user, searchesUsed), error: 'Search limit reached' }, { status: 403 });
     }
 
     const analysis = generateMockAnalysis(normalizedQuery);
@@ -85,7 +109,7 @@ export async function POST(req: Request) {
         where: { id: user.id },
         data: { freeSearchesUsed: searchesUsed + 1 },
       });
-      if (updatedUser.count !== 1) throw new Error('Free search limit reached');
+      if (updatedUser.count !== 1) throw new Error('Search limit reached');
 
       const search = await transaction.search.create({
         data: {
@@ -106,7 +130,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to create search';
-    if (message === 'Free search limit reached') {
+    if (message === 'Search limit reached') {
       return NextResponse.json({ error: message, freeSearchesLeft: 0, limited: true }, { status: 403 });
     }
     console.error('Search creation error:', error);

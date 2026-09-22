@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [hasPressedAnalyseAnother, setHasPressedAnalyseAnother] = useState(false);
   const [hasPreviousSearches, setHasPreviousSearches] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
   const [searchesLeft, setSearchesLeft] = useState(3);
   const [searchLimitMessage, setSearchLimitMessage] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
@@ -46,7 +47,8 @@ export default function DashboardPage() {
           const data = await response.json();
           const searches = data.searches ?? [];
           setHasPreviousSearches(searches.length > 0);
-          setSearchesLeft(data.freeSearchesLeft ?? 3);
+          setIsPaid(data.isPaid === true);
+          setSearchesLeft(data.searchesLeft ?? data.freeSearchesLeft ?? 3);
 
           const isNewSearchRequest =
             new URLSearchParams(window.location.search).get('newSearch') === '1';
@@ -103,7 +105,9 @@ export default function DashboardPage() {
                       onClick={() => {
                         if (searchesLeft === 0) {
                           setSearchLimitMessage(
-                            'You have reached your 3 free searches. Upgrade to analyse another adventure.'
+                            isPaid
+                              ? 'You have reached your 7 monthly searches.'
+                              : 'You have reached your 3 free searches. Upgrade to analyse another adventure.'
                           );
                           return;
                         }
