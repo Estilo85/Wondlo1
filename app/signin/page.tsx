@@ -30,8 +30,24 @@ export default function SignInPage() {
         }
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            router.push('/dashboard');
+            const credential = await signInWithEmailAndPassword(auth, email, password);
+            const redirect = new URLSearchParams(window.location.search).get('redirect');
+            let destination = redirect?.startsWith('/') && !redirect.startsWith('//')
+                ? redirect
+                : '/dashboard';
+
+            if (!redirect) {
+                const token = await credential.user.getIdToken();
+                const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`);
+                const data = response.ok ? await response.json() : null;
+                const previousQuery = data?.searches?.[0]?.query;
+
+                if (previousQuery) {
+                    destination = `/analyze/results?q=${encodeURIComponent(previousQuery)}`;
+                }
+            }
+
+            router.replace(destination);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Invalid credentials.');
             setLoading(false);

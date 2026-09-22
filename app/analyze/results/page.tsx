@@ -356,20 +356,20 @@ function ResultsContent() {
 
   useEffect(() => {
     if (!auth) {
-      router.replace('/signin');
+      router.replace(`/signin?redirect=${encodeURIComponent(`/analyze/results?${searchParams.toString()}`)}`);
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (!firebaseUser) {
-        router.replace('/signin');
+        router.replace(`/signin?redirect=${encodeURIComponent(`/analyze/results?${searchParams.toString()}`)}`);
       } else {
         setAuthReady(true);
       }
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, searchParams]);
 
   useEffect(() => {
     if (!authReady || !auth?.currentUser || consumedRef.current) return;

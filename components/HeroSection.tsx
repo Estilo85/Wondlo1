@@ -246,7 +246,7 @@ export default function HeroSection({
     }
 
     if (!auth?.currentUser) {
-      router.push('/signin');
+      router.push(`/signin?redirect=${encodeURIComponent(`/analyze/results?q=${encodeURIComponent(q)}`)}`);
       return;
     }
 
