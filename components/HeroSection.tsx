@@ -261,7 +261,8 @@ export default function HeroSection({
       if (response.ok) {
         router.push(`/analyze/results?q=${encodeURIComponent(q)}`);
       } else if (response.status === 403) {
-        setSearchError('You have reached your 3 free searches. Upgrade to analyse another adventure.');
+        const data = await response.json();
+        setSearchError(data.error || 'Your search allowance for this plan is used up.');
       }
     } catch (error) {
       console.error('Search failed:', error);

@@ -5,12 +5,40 @@ import { generateMockAnalysis } from '@/lib/mock-analysis';
 import { FREE_TRIAL_SEARCHES, isPaidPlan, type BillingUser } from '@/lib/billing';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const STARTER_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 
 async function getUser(token: string): Promise<(BillingUser & { id: string; name: string }) | null> {
   const decoded = await adminAuth.verifyIdToken(token);
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { firebaseId: decoded.uid },
-  }) as Promise<(BillingUser & { id: string; name: string }) | null>;
+  }) as (BillingUser & { id: string; name: string }) | null;
+
+  if (!user || user.plan !== 'starter') return user;
+
+  const now = new Date();
+  if (user.cycleEndsAt && user.cycleEndsAt <= now) {
+    return prisma.$transaction(async (transaction) => {
+      await transaction.search.deleteMany({ where: { userId: user.id } });
+      return transaction.user.update({
+        where: { id: user.id },
+        data: {
+          searchAllowanceUsed: 0,
+          cycleEndsAt: new Date(now.getTime() + STARTER_PERIOD_MS),
+        },
+      }) as Promise<BillingUser & { id: string; name: string }>;
+    });
+  }
+
+  if (!user.cycleEndsAt) {
+    return prisma.user.update({
+      where: { id: user.id },
+      data: { cycleEndsAt: new Date(now.getTime() + STARTER_PERIOD_MS) },
+    }) as Promise<BillingUser & { id: string; name: string }>;
+  }
+
+  return user;
 }
 
 function usageForUser(user: BillingUser) {
@@ -59,7 +87,7 @@ export async function GET(req: Request) {
         analysis: search.analysis,
         createdAt: search.createdAt,
       })),
-    });
+    }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   } catch (error) {
     console.error('Search history error:', error);
     return NextResponse.json({ error: 'Unable to load search history' }, { status: 500 });
@@ -81,11 +109,49 @@ export async function POST(req: Request) {
       where: { userId_queryKey: { userId: user.id, queryKey } },
     });
     if (existing) {
+      const usage = usageForUser(user);
+      if (usage.limited) {
+        const message = usage.paid
+          ? 'Your search allowance for this plan is used up. Add more searches to analyse another adventure.'
+          : 'Free search limit reached';
+        return NextResponse.json(
+          { ...responseForUser(user), error: message },
+          { status: 403 }
+        );
+      }
+
+      const updatedProfile = await prisma.$transaction(async (transaction) => {
+        if (usage.paid) {
+          await transaction.user.update({
+            where: { id: user.id },
+            data: { searchAllowanceUsed: { increment: 1 } },
+          });
+        } else {
+          const updatedUser = await transaction.user.updateMany({
+            where: { id: user.id, freeSearchesUsed: usage.used },
+            data: { freeSearchesUsed: { increment: 1 } },
+          });
+          if (updatedUser.count !== 1) throw new Error('Free search limit reached');
+        }
+
+        return transaction.user.findUniqueOrThrow({
+          where: { id: user.id },
+          select: {
+            name: true,
+            plan: true,
+            searchAllowance: true,
+            searchAllowanceUsed: true,
+            freeSearchesUsed: true,
+            cycleEndsAt: true,
+          },
+        });
+      });
+
       return NextResponse.json({
-        ...responseForUser(user),
+        ...responseForUser(updatedProfile),
         created: false,
         search: { id: existing.id, query: existing.query, analysis: existing.analysis },
-      });
+      }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
     }
 
     const usage = usageForUser(user);
@@ -143,7 +209,7 @@ export async function POST(req: Request) {
       ...responseForUser(result.updatedProfile),
       created: true,
       search: { id: result.search.id, query: result.search.query, analysis: result.search.analysis },
-    });
+    }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to create search';
     if (message === 'Free search limit reached') {

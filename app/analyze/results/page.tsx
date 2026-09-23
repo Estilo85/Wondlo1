@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -33,7 +33,6 @@ function ResultsContent() {
   const [searchLimitMessage, setSearchLimitMessage] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisReport | null>(null);
   const [savedAnalyses, setSavedAnalyses] = useState<AnalysisReport[]>([]);
-  const consumedRef = useRef(false);
 
   const handleSignOut = async () => {
     if (auth) {
@@ -373,20 +372,21 @@ function ResultsContent() {
   }, [router, searchParams]);
 
   useEffect(() => {
-    if (!authReady || !auth?.currentUser || consumedRef.current) return;
+    if (!authReady || !auth?.currentUser) return;
 
-    consumedRef.current = true;
     (async () => {
       try {
         const token = await auth.currentUser!.getIdToken();
-        const res = await fetch(`/api/search?token=${encodeURIComponent(token)}`);
+        const res = await fetch(`/api/search?token=${encodeURIComponent(token)}&t=${Date.now()}`, {
+          cache: 'no-store',
+        });
         if (res.ok) {
           const data = await res.json();
           setUserName(data.name || 'TRAVELLER');
           const paid = data.isPaid === true || isPaidPlan(data.plan);
           setIsPaid(paid);
           setSearchesLeft(data.left ?? data.freeSearchesLeft ?? 3);
-          setPaidSearchesLeft(data.left ?? 7);
+          setPaidSearchesLeft(data.paidSearchesLeft ?? data.searchesLeft ?? data.left ?? 7);
           if (data.limited) {
             setSearchLimitMessage(
               paid

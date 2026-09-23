@@ -43,7 +43,9 @@ export default function DashboardPage() {
     (async () => {
       try {
         const token = await auth.currentUser!.getIdToken();
-        const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`, {
+          cache: 'no-store',
+        });
         if (response.ok) {
           const data = await response.json();
           const searches = data.searches ?? [];
