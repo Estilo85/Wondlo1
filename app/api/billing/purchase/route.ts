@@ -16,17 +16,25 @@ function generateOrderRef() {
 function isValidCard(card: unknown): card is { brand: string; last4: string; expMonth: number; expYear: number } {
   if (!card || typeof card !== 'object') return false;
   const c = card as Record<string, unknown>;
-  return (
-    typeof c.brand === 'string' &&
-    c.brand.length > 0 &&
-    typeof c.last4 === 'string' &&
-    /^\d{4}$/.test(c.last4) &&
-    typeof c.expMonth === 'number' &&
-    c.expMonth >= 1 &&
-    c.expMonth <= 12 &&
-    typeof c.expYear === 'number' &&
-    c.expYear >= new Date().getFullYear()
-  );
+  if (
+    typeof c.brand !== 'string' ||
+    c.brand.length === 0 ||
+    typeof c.last4 !== 'string' ||
+    !/^\d{4}$/.test(c.last4) ||
+    typeof c.expMonth !== 'number' ||
+    c.expMonth < 1 ||
+    c.expMonth > 12 ||
+    typeof c.expYear !== 'number'
+  ) {
+    return false;
+  }
+  const now = new Date();
+  const currentMonth = now.getFullYear() * 12 + now.getMonth() + 1;
+  const cardMonth = c.expYear * 12 + c.expMonth;
+  if (cardMonth < currentMonth) {
+    return false;
+  }
+  return true;
 }
 
 export async function POST(req: Request) {
