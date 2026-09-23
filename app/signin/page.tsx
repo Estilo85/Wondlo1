@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import {
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail,
+} from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -17,6 +20,8 @@ export default function SignInPage() {
     const [loading, setLoading] = useState(false);
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetMessage, setResetMessage] = useState('');
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,6 +56,41 @@ export default function SignInPage() {
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Invalid credentials.');
             setLoading(false);
+        }
+    };
+
+    const handlePasswordReset = async () => {
+        if (!auth) {
+            setError('Authentication is not configured yet. Please contact support or add Firebase environment variables.');
+            return;
+        }
+
+        if (!email) {
+            setError('Please enter your email address first.');
+            return;
+        }
+
+        setResetLoading(true);
+        setError('');
+        setResetMessage('');
+
+        try {
+            await sendPasswordResetEmail(auth, email, {
+                url: `${window.location.origin}/reset-password`,
+                handleCodeInApp: true,
+            });
+
+            setResetMessage(
+                'Password reset email sent. Please check your inbox.'
+            );
+        } catch (err: unknown) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : 'Unable to send password reset email.'
+            );
+        } finally {
+            setResetLoading(false);
         }
     };
 
@@ -90,21 +130,15 @@ export default function SignInPage() {
             <div className="flex flex-1 items-center justify-center px-4 pb-12 pt-24 sm:px-6 md:pt-28">
                 <div className="w-full max-w-md">
 
-                    {/* =====================================================
-                        BADGE
-                    ====================================================== */}
+                    {/* BADGE */}
                     <div className="mb-6 flex justify-center">
                         <span className="inline-flex rounded-full bg-[#7E6BB3] px-6 py-2 text-sm font-medium text-white">
                             3 Free Safety Checks
                         </span>
                     </div>
 
-
-                    {/* =====================================================
-                        SIGN IN CARD
-                    ====================================================== */}
-                    <div
-                        className="
+                    {/* SIGN IN CARD */}
+                    <div className="
                             rounded-[20px]
                             border
                             border-[#DDD7EA]
@@ -112,32 +146,13 @@ export default function SignInPage() {
                             p-6
                             shadow-[0_2px_5px_rgba(47,39,64,0.08)]
                             sm:p-8
-                        "
-                    >
-
-                        {/* =================================================
-                            HEADING
-                        ================================================== */}
-                        <h1
-                            className="
-                                mb-2
-                                text-center
-                                text-3xl
-                                font-semibold
-                                text-[#2B2740]
-                            "
-                        >
+                        ">
+                        {/* HEADING */}
+                        <h1 className="mb-2 text-center text-3xl font-semibold text-[#2B2740]">
                             Welcome back
                         </h1>
 
-                        <p
-                            className="
-                                mb-8
-                                text-center
-                                text-sm
-                                text-[#6B7280]
-                            "
-                        >
+                        <p className="mb-8 text-center text-sm text-[#6B7280]">
                             Sign in to continue to your account.{' '}
                             <Link
                                 href="/signup"
@@ -147,58 +162,47 @@ export default function SignInPage() {
                             </Link>
                         </p>
 
-
-                        {/* =================================================
-                            ERROR
-                        ================================================== */}
+                        {/* ERROR */}
                         {error && (
-                            <div
-                                className="
+                            <div className="
                                     mb-4
                                     rounded-[15px]
                                     bg-red-50
                                     p-3
                                     text-sm
                                     text-red-600
-                                "
-                            >
+                                ">
                                 {error}
                             </div>
                         )}
 
+                        {/* RESET MESSAGE */}
+                        {resetMessage && (
+                            <div className="
+                                    mb-4
+                                    rounded-[15px]
+                                    bg-green-50
+                                    p-3
+                                    text-sm
+                                    text-green-600
+                                ">
+                                {resetMessage}
+                            </div>
+                        )}
 
-                        {/* =================================================
-                            SIGN IN FORM
-                        ================================================== */}
-                        <form
-                            onSubmit={handleSignIn}
-                            className="space-y-4"
-                        >
-
-                            {/* =================================================
-                                EMAIL
-                            ================================================== */}
+                        {/* SIGN IN FORM */}
+                        <form onSubmit={handleSignIn} className="space-y-4">
+                            {/* EMAIL */}
                             <div>
-                                <label
-                                    className="
-                                        mb-1
-                                        block
-                                        text-sm
-                                        font-medium
-                                        text-[#2B2740]
-                                    "
-                                >
+                                <label className="mb-1 block text-sm font-medium text-[#2B2740]">
                                     Email Address
                                 </label>
-
                                 <input
                                     type="email"
                                     required
                                     placeholder="you@example.com"
                                     value={email}
-                                    onChange={(e) =>
-                                        setEmail(e.target.value)
-                                    }
+                                    onChange={(e) => setEmail(e.target.value)}
                                     className="
                                         h-12
                                         w-full
@@ -218,62 +222,62 @@ export default function SignInPage() {
                                 />
                             </div>
 
-
-                            {/* =================================================
-                                PASSWORD
-                            ================================================== */}
+                            {/* PASSWORD */}
                             <div>
                                 <div className="mb-1 flex items-center justify-between">
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            text-[#2B2740]
-                                        "
-                                    >
+                                    <label className="block text-sm font-medium text-[#2B2740]">
                                         Password
                                     </label>
 
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowPassword(
-                                                (current) => !current
-                                            )
-                                        }
-                                        className="
-                                            flex
-                                            items-center
-                                            gap-1
-                                            text-xs
-                                            text-[#6B7280]
-                                            transition-colors
-                                            hover:text-[#8B6BCB]
-                                        "
-                                    >
-                                        {showPassword ? 'Hide' : 'Show'}
-
-                                        <span
-                                            aria-hidden="true"
-                                            className="text-sm"
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handlePasswordReset}
+                                            disabled={resetLoading}
+                                            className="
+                                                text-xs
+                                                text-[#8B6BCB]
+                                                transition-colors
+                                                hover:underline
+                                                disabled:cursor-not-allowed
+                                                disabled:opacity-60
+                                            "
                                         >
-                                            👁
-                                        </span>
-                                    </button>
+                                            {resetLoading
+                                                ? 'Sending...'
+                                                : 'Forgot password? Reset'}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setShowPassword(
+                                                    (current) => !current
+                                                )
+                                            }
+                                            className="
+                                                flex
+                                                items-center
+                                                gap-1
+                                                text-xs
+                                                text-[#6B7280]
+                                                transition-colors
+                                                hover:text-[#8B6BCB]
+                                            "
+                                        >
+                                            {showPassword ? 'Hide' : 'Show'}
+                                            <span aria-hidden="true" className="text-sm">
+                                                👁
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <input
-                                    type={
-                                        showPassword
-                                            ? 'text'
-                                            : 'password'
-                                    }
+                                    type={showPassword ? 'text' : 'password'}
                                     required
                                     value={password}
-                                    onChange={(e) =>
-                                        setPassword(e.target.value)
-                                    }
+                                    onChange={(e) => setPassword(e.target.value)}
                                     className="
                                         h-12
                                         w-full
@@ -292,10 +296,7 @@ export default function SignInPage() {
                                 />
                             </div>
 
-
-                            {/* =================================================
-                                SIGN IN BUTTON
-                            ================================================== */}
+                            {/* SIGN IN BUTTON */}
                             <button
                                 type="submit"
                                 disabled={loading}
@@ -313,22 +314,15 @@ export default function SignInPage() {
                                     disabled:opacity-60
                                 "
                             >
-                                {loading
-                                    ? 'Signing in...'
-                                    : 'Sign In'}
+                                {loading ? 'Signing in...' : 'Sign In'}
                             </button>
-
                         </form>
 
-
-                        {/* =================================================
-                            DIVIDER
-                        ================================================== */}
+                        {/* DIVIDER */}
                         <div className="relative my-6">
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-[#DDD7EA]" />
                             </div>
-
                             <div className="relative flex justify-center text-sm">
                                 <span className="bg-[#F6F4FE] px-4 text-[#6B7280]">
                                     or
@@ -336,10 +330,7 @@ export default function SignInPage() {
                             </div>
                         </div>
 
-
-                        {/* =================================================
-                            REFER YOUR TRAVEL BUDDY
-                        ================================================== */}
+                        {/* REFER YOUR TRAVEL BUDDY */}
                         <button
                             type="button"
                             onClick={handleReferBuddy}
@@ -361,27 +352,15 @@ export default function SignInPage() {
                             "
                         >
                             <FaUserFriends className="text-[#8B6BCB]" />
-
                             Refer Your Travel Buddy
                         </button>
 
-
-                        {/* =================================================
-                            COPIED MESSAGE
-                        ================================================== */}
+                        {/* COPIED MESSAGE */}
                         {copied && (
-                            <p
-                                className="
-                                    mt-3
-                                    text-center
-                                    text-sm
-                                    text-green-600
-                                "
-                            >
+                            <p className="mt-3 text-center text-sm text-green-600">
                                 ✅ Link copied to clipboard!
                             </p>
                         )}
-
                     </div>
                 </div>
             </div>

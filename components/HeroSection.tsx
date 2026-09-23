@@ -203,7 +203,7 @@ export default function HeroSection({
       }, 500);
 
       return () => clearTimeout(timeout);
-    }, 60000);
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [cards.length]);
