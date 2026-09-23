@@ -24,10 +24,15 @@ async function clearPreviousMonthSearches(userId: string) {
 
 async function getUser(token: string) {
   const decoded = await adminAuth.verifyIdToken(token);
-  return prisma.user.findUnique({ where: { firebaseId: decoded.uid } });
+  return prisma.user.findUnique({
+    where: { firebaseId: decoded.uid },
+  });
 }
 
-function responseForUser(user: { name: string; isPaid: boolean }, searchesUsed: number) {
+function responseForUser(
+  user: { name: string; isPaid: boolean },
+  searchesUsed: number
+) {
   const searchLimit = user.isPaid ? PAID_SEARCH_LIMIT : FREE_SEARCH_LIMIT;
 
   return {
