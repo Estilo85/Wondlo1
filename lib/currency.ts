@@ -7,7 +7,8 @@ export const CURRENCIES: { code: CurrencyCode; label: string; symbol: string; ra
 ];
 
 const STORAGE_KEY = 'wondlo.currency';
-const EVENT_NAME = 'wondlo:currency-change';
+
+const listeners = new Set<() => void>();
 
 export function getStoredCurrency(): CurrencyCode {
   if (typeof window === 'undefined') return 'GBP';
@@ -15,18 +16,23 @@ export function getStoredCurrency(): CurrencyCode {
   return CURRENCIES.some((c) => c.code === stored) ? (stored as CurrencyCode) : 'GBP';
 }
 
+export function getSnapshot(): CurrencyCode {
+  return getStoredCurrency();
+}
+
+export function getServerSnapshot(): CurrencyCode {
+  return 'GBP';
+}
+
+export function subscribe(callback: () => void): () => void {
+  listeners.add(callback);
+  return () => listeners.delete(callback);
+}
+
 export function setStoredCurrency(code: CurrencyCode) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(STORAGE_KEY, code);
-  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: code }));
-}
-
-export function subscribeCurrency(callback: (code: CurrencyCode) => void): () => void {
-  const handler = (event: Event) => {
-    callback((event as CustomEvent<CurrencyCode>).detail);
-  };
-  window.addEventListener(EVENT_NAME, handler);
-  return () => window.removeEventListener(EVENT_NAME, handler);
+  listeners.forEach((callback) => callback());
 }
 
 export function convertPence(pence: number, currency: CurrencyCode): number {

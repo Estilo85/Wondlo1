@@ -1,30 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import {
   CURRENCIES,
-  getStoredCurrency,
+  getSnapshot,
+  getServerSnapshot,
   setStoredCurrency,
-  subscribeCurrency,
+  subscribe,
   type CurrencyCode,
 } from '@/lib/currency';
 
 export function useCurrency(): CurrencyCode {
-  const [currency, setCurrency] = useState<CurrencyCode>(() => getStoredCurrency());
-
-  useEffect(() => {
-    return subscribeCurrency((code) => setCurrency(code));
-  }, []);
-
-  return currency;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 export default function CurrencySelector() {
-  const [currency, setCurrency] = useState<CurrencyCode>(() => getStoredCurrency());
-
-  useEffect(() => {
-    return subscribeCurrency((code) => setCurrency(code));
-  }, []);
+  const currency = useCurrency();
 
   return (
     <label className="relative flex-shrink-0 cursor-pointer" aria-label="Display currency">
