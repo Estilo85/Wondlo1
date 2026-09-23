@@ -100,7 +100,7 @@ export default function BillingPage() {
   };
 
   useEffect(() => {
-    if (authReady) load();
+if (authReady) load();
   }, [authReady]);
 
   const changeDefault = async (cardId: string) => {

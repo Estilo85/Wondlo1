@@ -8,7 +8,9 @@ export const runtime = 'nodejs';
 
 async function getUser(token: string) {
   const decoded = await adminAuth.verifyIdToken(token);
-  return prisma.user.findUnique({ where: { firebaseId: decoded.uid } });
+  return prisma.user.findUnique({
+    where: { firebaseId: decoded.uid },
+  });
 }
 
 function usageForUser(user: BillingUser) {

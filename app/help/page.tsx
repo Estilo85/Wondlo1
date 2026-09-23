@@ -137,7 +137,7 @@ export default function HelpPage() {
               <h2
                 className="font-poppins mb-2 text-lg font-semibold text-[#2B2740]"
               >
-                How It Works & Navigation
+                Wondlo User Guide
               </h2>
 
               <p
