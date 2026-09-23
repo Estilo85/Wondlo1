@@ -158,6 +158,40 @@ export default function HelpPage() {
               </Link>
             </div>
 
+            {/* Payments, Refunds & Cancellation FAQ */}
+            <div
+              className="flex flex-col rounded-2xl bg-[#FCFCFB] p-6 transition-transform duration-300 hover:-translate-y-1"
+              style={{
+                border:
+                  '0.1px solid rgba(43, 39, 64, 0.10)',
+                boxShadow:
+                  '0 8px 20px rgba(43, 39, 64, 0.12)',
+              }}
+            >
+              <h2
+                className="font-poppins mb-2 text-lg font-semibold text-[#2B2740]"
+              >
+                Payments, Refunds &amp; Cancellation
+              </h2>
+
+              <p
+                className="mb-4 text-sm text-[#4A4560]"
+                style={{
+                  lineHeight: '1.5',
+                }}
+              >
+                How billing works, how to get a refund, and how to cancel your
+                plan — answered.
+              </p>
+
+              <Link
+                href="/faq"
+                className="mt-auto text-xs font-semibold text-[#7E6BB3] transition-colors duration-200 hover:text-[#2B2740]"
+              >
+                Read the FAQ &rarr;
+              </Link>
+            </div>
+
           </div>
         </div>
       </main>

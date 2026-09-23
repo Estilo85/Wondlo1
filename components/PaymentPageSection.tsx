@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 import Footer from '@/components/Footer';
+import CurrencySelector, { useCurrency } from '@/components/CurrencySelector';
+import { formatConverted } from '@/lib/currency';
 import { auth } from '@/lib/firebase-client';
 
 type BillingStatus = {
@@ -30,6 +32,7 @@ export default function PaymentPageSection({
   const [profileOpen, setProfileOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const currency = useCurrency();
 
   const handleSignOut = async () => {
     if (auth) {
@@ -245,9 +248,27 @@ export default function PaymentPageSection({
 
               <Link
                 href="/billing"
-                className="h-9 rounded-lg border border-[#7E6BB3] bg-white px-4 text-xs font-semibold text-[#7E6BB3] transition-colors hover:bg-[#EDE7FB]"
+                className="group inline-flex h-9 items-center gap-2 rounded-full bg-gradient-to-r from-[#7E6BB3] to-[#9A87CE] px-4 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(126,107,179,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(126,107,179,0.45)]"
               >
+                <svg
+                  className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+
                 Manage billing
+
+                <span className="transition-transform duration-300 group-hover:translate-x-0.5">
+                  →
+                </span>
               </Link>
             </div>
           </div>
@@ -279,7 +300,7 @@ export default function PaymentPageSection({
             UPGRADE HEADER
             171 × 50
         ============================================================ */}
-        <div className="mb-10 flex justify-center">
+        <div className="mb-10 flex flex-wrap items-center justify-center gap-3">
           <div
             className="flex h-[50px] w-[171px] items-center justify-center rounded-full"
             style={{
@@ -291,6 +312,13 @@ export default function PaymentPageSection({
               UPGRADE
             </span>
           </div>
+
+          <span className="flex items-center gap-2">
+            <span className="font-inter text-xs font-semibold text-[#7E6BB3]">
+              Display prices in
+            </span>
+            <CurrencySelector />
+          </span>
         </div>
 
         {/* ============================================================
@@ -337,7 +365,7 @@ export default function PaymentPageSection({
                 {/* Price */}
                 <div className="mt-12 flex items-baseline justify-center">
                   <span className="text-[60px] leading-[72px] font-bold text-[#2B2740]">
-                    0£
+                    {formatConverted(0, currency)}
                   </span>
 
                   <span className="ml-0 text-[24px] leading-[30px] font-bold text-[#2B2740]">
@@ -408,7 +436,7 @@ export default function PaymentPageSection({
                 {/* Price */}
                 <div className="mt-12 flex items-baseline justify-center">
                   <span className="text-[60px] leading-[72px] font-bold text-[#2B2740]">
-                    3£
+                    {formatConverted(300, currency)}
                   </span>
 
                   <span className="ml-0 text-[24px] leading-[30px] font-bold text-[#2B2740]">
@@ -487,7 +515,7 @@ export default function PaymentPageSection({
                 {/* Price */}
                 <div className="mt-12 flex items-baseline justify-center">
                   <span className="text-[60px] leading-[72px] font-bold text-[#2B2740]">
-                    15£
+                    {formatConverted(1500, currency)}
                   </span>
 
                   <span className="ml-0 text-[24px] leading-[30px] font-bold text-[#2B2740]">

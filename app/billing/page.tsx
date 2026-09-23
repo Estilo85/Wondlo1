@@ -7,6 +7,8 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { jsPDF } from 'jspdf';
 
 import Footer from '@/components/Footer';
+import CurrencySelector, { useCurrency } from '@/components/CurrencySelector';
+import { formatConverted } from '@/lib/currency';
 import { auth } from '@/lib/firebase-client';
 import { formatMoney, formatCardBrand, PLANS } from '@/lib/billing';
 
@@ -57,6 +59,7 @@ export default function BillingPage() {
   const [data, setData] = useState<BillingResponse | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const currency = useCurrency();
 
   const handleSignOut = async () => {
     if (auth) {
@@ -100,7 +103,10 @@ export default function BillingPage() {
   };
 
   useEffect(() => {
-if (authReady) load();
+    if (authReady) {
+      const timer = window.setTimeout(() => void load(), 0);
+      return () => window.clearTimeout(timer);
+    }
   }, [authReady]);
 
   const changeDefault = async (cardId: string) => {
@@ -194,7 +200,7 @@ if (authReady) load();
     setText(DARK);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    details.forEach(([k, v], i) => {
+    details.forEach(([k, v]) => {
       const labelX = pageWidth - margin - 90;
       ensure(8);
       setText(GRAY);
@@ -349,7 +355,7 @@ if (authReady) load();
       </header>
 
       <main className="mx-auto w-full max-w-[1340px] px-4 py-10 pb-16 sm:px-6 sm:py-12 sm:pb-20 xl:px-0">
-        <div className="mb-10 flex justify-center">
+        <div className="mb-10 flex flex-wrap items-center justify-center gap-3">
           <div
             className="flex h-[50px] w-[171px] items-center justify-center rounded-full"
             style={{
@@ -361,6 +367,13 @@ if (authReady) load();
               BILLING
             </span>
           </div>
+
+          <span className="flex items-center gap-2">
+            <span className="font-inter text-xs font-semibold text-[#7E6BB3]">
+              Display prices in
+            </span>
+            <CurrencySelector />
+          </span>
         </div>
 
         {error && (
@@ -383,7 +396,7 @@ if (authReady) load();
                   <p className="text-sm font-semibold text-[#2B2740]">
                     {data.pricePence === 0
                       ? 'Free'
-                      : `${formatMoney(data.pricePence)}${data.cadence}`}
+                      : `${formatConverted(data.pricePence, currency)}${data.cadence}`}
                   </p>
                 </div>
 

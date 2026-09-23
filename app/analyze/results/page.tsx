@@ -1589,8 +1589,7 @@ function ResultsContent() {
             <div className="mt-5 flex flex-1 flex-col md:flex-row items-center justify-center md:justify-between gap-5 border-t border-white/30 pt-5">
               <p className="max-w-[330px] text-center md:text-left font-inter text-[14px] leading-[16px] font-normal text-white">
                 AI-assisted safety assessments based on publicly available
-                information. Should support—not replace—official travel
-                advisories.
+                information.
               </p>
 
               <div className="text-center font-inter text-[14px] leading-[16px] font-normal text-white">

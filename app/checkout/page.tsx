@@ -4,13 +4,14 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import CurrencySelector, { useCurrency } from '@/components/CurrencySelector';
+import { formatConverted } from '@/lib/currency';
 import { auth } from '@/lib/firebase-client';
 
 const PLANS = {
   'pay-as-you-go': {
     name: 'Pay As You Go',
-    price: 3.0,
-    priceLabel: '£3',
+    pricePence: 300,
     cadence: '/search',
     features: [
       'One Search',
@@ -21,8 +22,7 @@ const PLANS = {
   },
   starter: {
     name: 'Starter Plan',
-    price: 15.0,
-    priceLabel: '£15',
+    pricePence: 1500,
     cadence: '/month',
     features: [
       'Seven Searches / Month',
@@ -80,6 +80,8 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const planKey = (searchParams.get('plan') || '') as PlanKey;
   const plan = PLANS[planKey];
+  const currency = useCurrency();
+  const priceLabel = formatConverted(plan.pricePence, currency);
 
   const [email, setEmail] = useState('');
   const [cardholder, setCardholder] = useState('');
@@ -223,7 +225,7 @@ function CheckoutContent() {
 
             <p className="mt-3 font-inter text-sm leading-relaxed text-[#4A4560]">
               Thank you! Your <strong>{plan.name}</strong> is active at{' '}
-              {plan.priceLabel}
+              {priceLabel}
               {plan.cadence}. A receipt has been sent to{' '}
               <span className="font-semibold">{email.trim()}</span>.
             </p>
@@ -240,9 +242,16 @@ function CheckoutContent() {
               <div className="mt-2 flex justify-between text-sm">
                 <span className="text-[#4A4560]">Total paid</span>
                 <span className="font-semibold">
-                  {plan.priceLabel}
+                  {priceLabel}
                   {plan.cadence}
                 </span>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#EDE7FB] pt-3">
+                <span className="font-inter text-xs font-semibold text-[#4A4560]">
+                  Display prices in
+                </span>
+                <CurrencySelector />
               </div>
             </div>
 
@@ -317,7 +326,7 @@ function CheckoutContent() {
               </div>
 
               <p className="text-2xl font-bold text-[#2B2740]">
-                {plan.priceLabel}
+                {priceLabel}
                 <span className="text-sm font-medium text-[#4A4560]">
                   {plan.cadence}
                 </span>
@@ -343,7 +352,7 @@ function CheckoutContent() {
             <div className="mt-6 space-y-2 border-t border-[#EDE7FB] pt-4 font-inter text-sm">
               <div className="flex justify-between text-[#4A4560]">
                 <span>Subtotal</span>
-                <span>{plan.priceLabel}</span>
+                <span>{priceLabel}</span>
               </div>
               <div className="flex justify-between text-[#4A4560]">
                 <span>VAT</span>
@@ -352,7 +361,7 @@ function CheckoutContent() {
               <div className="mt-2 flex justify-between font-poppins font-semibold text-[#2B2740]">
                 <span>Total due today</span>
                 <span>
-                  {plan.priceLabel}
+                  {priceLabel}
                   {plan.cadence}
                 </span>
               </div>
@@ -511,7 +520,7 @@ function CheckoutContent() {
                   </>
                 ) : (
                   <>
-                    Pay {plan.priceLabel}
+                    Pay {priceLabel}
                     {plan.cadence === '/month' ? ' today' : ` ${plan.cadence}`}
                   </>
                 )}
