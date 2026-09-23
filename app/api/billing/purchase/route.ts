@@ -79,24 +79,18 @@ export async function POST(req: Request) {
         saved.expMonth === card.expMonth &&
         saved.expYear === card.expYear
     );
-    const savedCard = isCardSaved
-      ? user.savedCards.find(
-          (saved) =>
-            saved.brand === card.brand &&
-            saved.last4 === card.last4 &&
-            saved.expMonth === card.expMonth &&
-            saved.expYear === card.expYear
-        )
-      : await prisma.savedCard.create({
-          data: {
-            userId: user.id,
-            brand: card.brand,
-            last4: card.last4,
-            expMonth: card.expMonth,
-            expYear: card.expYear,
-            isDefault: user.savedCards.length === 0,
-          },
+    if (!isCardSaved) {
+      await prisma.savedCard.create({
+        data: {
+          userId: user.id,
+          brand: card.brand,
+          last4: card.last4,
+          expMonth: card.expMonth,
+          expYear: card.expYear,
+          isDefault: user.savedCards.length === 0,
+        },
         });
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },

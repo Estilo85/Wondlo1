@@ -103,10 +103,11 @@ export default function BillingPage() {
   };
 
   useEffect(() => {
-    if (authReady) {
-      const timer = window.setTimeout(() => void load(), 0);
-      return () => window.clearTimeout(timer);
-    }
+    if (!authReady) return;
+
+    void (async () => {
+      await load();
+    })();
   }, [authReady]);
 
   const changeDefault = async (cardId: string) => {

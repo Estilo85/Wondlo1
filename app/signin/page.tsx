@@ -43,7 +43,9 @@ export default function SignInPage() {
 
             if (!redirect) {
                 const token = await credential.user.getIdToken();
-                const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`);
+                const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`, {
+                    cache: 'no-store',
+                });
                 const data = response.ok ? await response.json() : null;
                 const previousQuery = data?.searches?.[0]?.query;
 

@@ -44,7 +44,6 @@ export default function PaidSidebar({
   onGetStarted,
   onGet,
   onBook,
-  onConsumeSearch,
   onSignOut,
   savedAnalyses = [],
 }: PaidSidebarProps) {

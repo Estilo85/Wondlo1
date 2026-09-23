@@ -8,6 +8,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import HeroSection from '@/components/HeroSection';
 import Footer from '@/components/Footer';
 import { auth } from '@/lib/firebase-client';
+import { isPaidPlan } from '@/lib/billing';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -42,13 +43,15 @@ export default function DashboardPage() {
     (async () => {
       try {
         const token = await auth.currentUser!.getIdToken();
-        const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`, {
+          cache: 'no-store',
+        });
         if (response.ok) {
           const data = await response.json();
           const searches = data.searches ?? [];
           setHasPreviousSearches(searches.length > 0);
-          setIsPaid(data.isPaid === true);
-          setSearchesLeft(data.searchesLeft ?? data.freeSearchesLeft ?? 3);
+          setIsPaid(isPaidPlan(data.plan));
+          setSearchesLeft(data.left ?? data.freeSearchesLeft ?? 3);
 
           const isNewSearchRequest =
             new URLSearchParams(window.location.search).get('newSearch') === '1';
