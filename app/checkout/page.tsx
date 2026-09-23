@@ -317,7 +317,13 @@ function CheckoutContent() {
           >
             <h2 className="text-lg font-bold text-[#2B2740]">Order summary</h2>
 
-            <div className="mt-4 flex items-center justify-between rounded-xl bg-[#FCFCFB] p-4" style={{ border: '0.1px solid rgba(43, 39, 64, 0.10)' }}>
+            <div
+              className="mt-4 flex items-center justify-between rounded-xl p-4"
+              style={{
+                background: 'linear-gradient(135deg, #EDE7FB 0%, #C7B5F5 100%)',
+                border: '0.1px solid rgba(43, 39, 64, 0.10)',
+              }}
+            >
               <div>
                 <p className="font-semibold text-[#2B2740]">{plan.name}</p>
                 <p className="mt-1 font-inter text-xs text-[#4A4560]">
