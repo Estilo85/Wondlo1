@@ -2,11 +2,22 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { signOut } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 import Footer from '@/components/Footer';
 import { auth } from '@/lib/firebase-client';
+
+type BillingStatus = {
+  plan: string;
+  label: string;
+  cadence: string;
+  allowance: number;
+  used: number;
+  left: number;
+  limited: boolean;
+  cycleEndsAt: string | null;
+};
 
 export default function PaymentPageSection({
   onPayAsYouGo,
@@ -17,6 +28,8 @@ export default function PaymentPageSection({
 }) {
   const router = useRouter();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
 
   const handleSignOut = async () => {
     if (auth) {
@@ -25,6 +38,42 @@ export default function PaymentPageSection({
 
     router.replace('/');
   };
+
+  useEffect(() => {
+    if (!auth) return;
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setSignedIn(Boolean(firebaseUser));
+      if (!firebaseUser) {
+        setBilling(null);
+        return;
+      }
+
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/billing/status?token=${encodeURIComponent(token)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setBilling({
+            plan: data.plan,
+            label: data.label,
+            cadence: data.cadence,
+            allowance: data.allowance,
+            used: data.used,
+            left: data.left,
+            limited: data.limited,
+            cycleEndsAt: data.cycleEndsAt ?? null,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load billing status:', error);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const usagePercent = billing && billing.allowance > 0 ? Math.min(100, Math.round((billing.used / billing.allowance) * 100)) : 0;
 
   return (
     <div className="min-h-screen bg-[#FAF9FE] text-[#2B2740] font-poppins antialiased">
@@ -127,6 +176,106 @@ export default function PaymentPageSection({
 
       <main className="mx-auto w-full max-w-[1340px] px-4 py-10 pb-16 sm:px-6 sm:py-12 sm:pb-20 xl:px-0">
         {/* ============================================================
+            BILLING STATUS
+        ============================================================ */}
+        {signedIn && billing ? (
+          <div
+            className="mb-8 flex flex-col gap-4 rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+            style={{
+              background: '#F6F4FE',
+              border: '0.1px solid rgba(43, 39, 64, 0.10)',
+              boxShadow: '0 8px 20px rgba(43, 39, 64, 0.06)',
+            }}
+          >
+            <div className="flex items-center gap-4 sm:gap-6">
+              <div
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#7E6BB3]"
+              >
+                <svg
+                  className="h-5 w-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 10h18M7 15h2m4 0h2m-8 4h12a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#7E6BB3]">
+                  Billing
+                </p>
+
+                <p className="text-sm font-bold text-[#2B2740]">
+                  You&apos;re on {billing.label}
+                </p>
+              </div>
+
+              <div className="w-full max-w-[220px] sm:w-[190px] flex-shrink-0">
+                <div className="mb-1 flex justify-between font-inter text-[11px] text-[#4A4560]">
+                  <span>
+                    {billing.used} of {billing.allowance} searches used
+                  </span>
+                  <span>{billing.left} left</span>
+                </div>
+
+                <div className="h-[10px] w-full overflow-hidden rounded-full bg-[#D9D9D9]">
+                  <div
+                    className="h-full rounded-full bg-[#7E6BB3] transition-all duration-300"
+                    style={{ width: `${usagePercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {billing.limited && billing.plan === 'free_trial' && (
+                <Link
+                  href="/checkout?plan=pay-as-you-go"
+                  className="h-9 rounded-lg bg-[#3D8A1E] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#32751A]"
+                >
+                  Top up searches
+                </Link>
+              )}
+
+              <Link
+                href="/billing"
+                className="h-9 rounded-lg border border-[#7E6BB3] bg-white px-4 text-xs font-semibold text-[#7E6BB3] transition-colors hover:bg-[#EDE7FB]"
+              >
+                Manage billing
+              </Link>
+            </div>
+          </div>
+        ) : signedIn ? (
+          <div className="mb-8 h-14 animate-pulse rounded-2xl bg-[#F6F4FE]" style={{ border: '0.1px solid rgba(43, 39, 64, 0.10)' }} />
+        ) : (
+          <div
+            className="mb-8 flex flex-col items-start justify-between gap-4 rounded-2xl p-5 sm:flex-row sm:items-center sm:p-6"
+            style={{
+              background: '#F6F4FE',
+              border: '0.1px solid rgba(43, 39, 64, 0.10)',
+              boxShadow: '0 8px 20px rgba(43, 39, 64, 0.06)',
+            }}
+          >
+            <p className="text-sm font-medium text-[#2B2740]">
+              Sign in to see your search balance and billing details.
+            </p>
+
+            <Link
+              href="/signin"
+              className="h-9 rounded-lg bg-[#7E6BB3] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#68559D]"
+            >
+              Sign in
+            </Link>
+          </div>
+        )}
+
+        {/* ============================================================
             UPGRADE HEADER
             171 × 50
         ============================================================ */}
@@ -201,6 +350,32 @@ export default function PaymentPageSection({
                   <p className="text-[20px] leading-[25px] font-normal text-[#000000]">
                     Three Searches
                   </p>
+
+                  <p className="mt-2 text-[13px] leading-[18px] font-normal text-[#4A4560]">
+                    No card required
+                  </p>
+                </div>
+
+                {/* Start Free Trial Button */}
+                <div className="mt-auto flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      signedIn
+                        ? router.push('/dashboard?newSearch=1')
+                        : router.push('/signup')
+                    }
+                    className="flex h-[32px] w-[150px] cursor-pointer items-center justify-center rounded-lg transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90"
+                    style={{
+                      background: 'rgba(126, 107, 179, 0.90)',
+                      border: '0.5px solid #FFFFFF',
+                      boxShadow: '0 6px 16px rgba(43, 39, 64, 0.20)',
+                    }}
+                  >
+                    <span className="text-[20px] leading-[25px] font-medium text-white">
+                      START FREE
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>

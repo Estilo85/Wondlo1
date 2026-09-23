@@ -9,15 +9,50 @@ generator client {
 }
 
 model User {
-  id              String   @id @default(uuid())
-  firebaseId      String?  @unique
-  name            String
-  email           String   @unique
-  isPaid          Boolean  @default(false)
-  freeSearchesUsed Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  searches        Search[]
+  id                 String    @id @default(uuid())
+  firebaseId         String?   @unique
+  name               String
+  email              String    @unique
+  freeSearchesUsed   Int       @default(0)
+  plan               String    @default("free_trial")
+  searchAllowance    Int       @default(3)
+  searchAllowanceUsed Int      @default(0)
+  cycleEndsAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  searches           Search[]
+  savedCards         SavedCard[]
+  purchases          Purchase[]
+}
+
+model SavedCard {
+  id        String   @id @default(uuid())
+  userId    String
+  brand     String
+  last4     String
+  expMonth  Int
+  expYear   Int
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Purchase {
+  id         String   @id @default(uuid())
+  userId     String
+  plan       String
+  amountPence Int
+  currency   String   @default("GBP")
+  orderRef   String   @unique
+  cardBrand  String?
+  cardLast4  String?
+  status     String   @default("paid")
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model Search {
