@@ -10,6 +10,7 @@ import { jsPDF } from 'jspdf';
 import FreeSidebar from '@/components/FreeSidebar';
 import PaidSidebar from '@/components/PaidSidebar';
 import SidebarToggleButton from '@/components/SidebarToggleButton';
+import { isPaidPlan } from '@/lib/billing';
 import type { AnalysisReport, DimensionScores } from '@/lib/mock-analysis';
 
 const sectionStyle = {
@@ -382,12 +383,13 @@ function ResultsContent() {
         if (res.ok) {
           const data = await res.json();
           setUserName(data.name || 'TRAVELLER');
-          setIsPaid(data.isPaid === true);
-          setSearchesLeft(data.searchesLeft ?? data.freeSearchesLeft ?? 3);
-          setPaidSearchesLeft(data.paidSearchesLeft ?? 7);
+          const paid = data.isPaid === true || isPaidPlan(data.plan);
+          setIsPaid(paid);
+          setSearchesLeft(data.left ?? data.freeSearchesLeft ?? 3);
+          setPaidSearchesLeft(data.left ?? 7);
           if (data.limited) {
             setSearchLimitMessage(
-              data.isPaid
+              paid
                 ? 'You have reached your 7 monthly searches.'
                 : 'You have reached your 3 free searches. Upgrade to analyse another adventure.'
             );
@@ -1589,8 +1591,7 @@ function ResultsContent() {
             <div className="mt-5 flex flex-1 flex-col md:flex-row items-center justify-center md:justify-between gap-5 border-t border-white/30 pt-5">
               <p className="max-w-[330px] text-center md:text-left font-inter text-[14px] leading-[16px] font-normal text-white">
                 AI-assisted safety assessments based on publicly available
-                information. Should support—not replace—official travel
-                advisories.
+                information.
               </p>
 
               <div className="text-center font-inter text-[14px] leading-[16px] font-normal text-white">

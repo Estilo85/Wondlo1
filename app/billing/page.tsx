@@ -100,7 +100,11 @@ export default function BillingPage() {
   };
 
   useEffect(() => {
-if (authReady) load();
+    if (!authReady) return;
+
+    void (async () => {
+      await load();
+    })();
   }, [authReady]);
 
   const changeDefault = async (cardId: string) => {
@@ -194,7 +198,7 @@ if (authReady) load();
     setText(DARK);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    details.forEach(([k, v], i) => {
+    details.forEach(([k, v]) => {
       const labelX = pageWidth - margin - 90;
       ensure(8);
       setText(GRAY);

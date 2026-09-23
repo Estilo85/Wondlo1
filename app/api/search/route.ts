@@ -6,11 +6,11 @@ import { FREE_TRIAL_SEARCHES, isPaidPlan, type BillingUser } from '@/lib/billing
 
 export const runtime = 'nodejs';
 
-async function getUser(token: string) {
+async function getUser(token: string): Promise<(BillingUser & { id: string; name: string }) | null> {
   const decoded = await adminAuth.verifyIdToken(token);
   return prisma.user.findUnique({
     where: { firebaseId: decoded.uid },
-  });
+  }) as Promise<(BillingUser & { id: string; name: string }) | null>;
 }
 
 function usageForUser(user: BillingUser) {
@@ -25,8 +25,11 @@ function responseForUser(user: BillingUser & { name: string }) {
   return {
     name: user.name,
     plan: user.plan,
+    isPaid: paid,
     searchAllowance: allowance,
     searchAllowanceUsed: paid ? used : user.freeSearchesUsed,
+    searchesLeft: left,
+    paidSearchesLeft: paid ? left : 0,
     renewalAt: user.cycleEndsAt ?? null,
     freeSearchesUsed: used,
     freeSearchesLeft: left,
