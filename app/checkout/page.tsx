@@ -286,6 +286,7 @@ function CheckoutContent() {
               token,
               plan: planKey,
               email,
+              currency,
               card: {
                 brand: brand || 'Card',
                 last4: cardNumber.replace(/\D/g, '').slice(-4),
@@ -438,18 +439,19 @@ function CheckoutContent() {
           <div
             className="order-2 lg:order-1 rounded-3xl p-6 sm:p-8"
             style={{
-              backgroundColor: '#F6F4FE',
-              border: '0.1px solid rgba(43, 39, 64, 0.10)',
-              boxShadow: '0 8px 30px rgba(43, 39, 64, 0.20)',
+              background: 'linear-gradient(160deg, #F3EDFC 0%, #E3D8F6 100%)',
+              border: '0.1px solid rgba(126, 107, 179, 0.25)',
+              boxShadow: '0 8px 30px rgba(126, 107, 179, 0.20)',
             }}
           >
-            <h2 className="text-lg font-bold text-[#2B2740]">Order summary</h2>
+            <h2 className="text-lg font-bold text-[#7E6BB3]">Order summary</h2>
 
             <div
               className="mt-4 flex items-center justify-between rounded-xl p-4"
               style={{
                 background: 'linear-gradient(135deg, #EDE7FB 0%, #C7B5F5 100%)',
-                border: '0.1px solid rgba(43, 39, 64, 0.10)',
+                border: '0.1px solid rgba(255, 255, 255, 0.8)',
+                boxShadow: '0 6px 18px rgba(126, 107, 179, 0.18)',
               }}
             >
               <div>
@@ -470,8 +472,8 @@ function CheckoutContent() {
             <ul className="mt-4 space-y-3">
               {plan.features.map((feature) => (
                 <li key={feature} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#3D8A1E]/15">
-                    <svg className="h-3 w-3 text-[#3D8A1E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#7E6BB3]/15">
+                    <svg className="h-3 w-3 text-[#7E6BB3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12.5l4 4L19 7" />
                     </svg>
                   </span>
@@ -483,7 +485,7 @@ function CheckoutContent() {
               ))}
             </ul>
 
-            <div className="mt-6 space-y-2 border-t border-[#EDE7FB] pt-4 font-inter text-sm">
+            <div className="mt-6 space-y-2 rounded-xl bg-white/60 p-4 font-inter text-sm" style={{ border: '0.1px solid rgba(126, 107, 179, 0.20)' }}>
               <div className="flex justify-between text-[#4A4560]">
                 <span>Subtotal</span>
                 <span>{priceLabel}</span>
@@ -492,7 +494,7 @@ function CheckoutContent() {
                 <span>VAT</span>
                 <span>Included</span>
               </div>
-              <div className="mt-2 flex justify-between font-poppins font-semibold text-[#2B2740]">
+              <div className="mt-2 flex justify-between border-t border-[#EDE7FB] pt-3 font-poppins font-bold text-[#7E6BB3]">
                 <span>Total due today</span>
                 <span>
                   {priceLabel}

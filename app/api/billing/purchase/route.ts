@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { adminAuth } from '@/lib/firebase-admin';
 import { PLANS, STARTER_SEARCHES } from '@/lib/billing';
+import { convertPence, isCurrencyCode, type CurrencyCode } from '@/lib/currency';
 
 export const runtime = 'nodejs';
 
@@ -40,7 +41,9 @@ function isValidCard(card: unknown): card is { brand: string; last4: string; exp
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { token, plan, email, card } = body;
+    const { token, plan, email, card, currency: currencyInput } = body;
+
+    const currency: CurrencyCode = isCurrencyCode(currencyInput) ? currencyInput : 'GBP';
 
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -71,6 +74,8 @@ export async function POST(req: Request) {
     const config = PLANS[plan as 'pay_as_you_go' | 'starter'];
     const orderRef = generateOrderRef();
     const cycleEndsAt = plan === 'starter' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : user.cycleEndsAt;
+    const amountPence =
+      currency === 'GBP' ? config.pricePence : Math.round(convertPence(config.pricePence, currency) * 100);
 
     const isCardSaved = user.savedCards.some(
       (saved) =>
@@ -107,8 +112,8 @@ export async function POST(req: Request) {
       data: {
         userId: user.id,
         plan,
-        amountPence: config.pricePence,
-        currency: 'GBP',
+        amountPence,
+        currency,
         orderRef,
         cardBrand: card.brand,
         cardLast4: card.last4,

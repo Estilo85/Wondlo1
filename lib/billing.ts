@@ -1,3 +1,5 @@
+import { currencySymbol, type CurrencyCode } from './currency';
+
 export type PlanKey = 'free_trial' | 'pay_as_you_go' | 'starter';
 
 export type PlanConfig = {
@@ -50,8 +52,7 @@ export function planInfo(user: BillingUser) {
 }
 
 export function formatMoney(pence: number, currency = 'GBP'): string {
-  const symbol = currency === 'GBP' ? '£' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '';
-  return `${symbol}${(pence / 100).toFixed(2)}`;
+  return `${currencySymbol(currency as CurrencyCode)}${(pence / 100).toFixed(2)}`;
 }
 
 export function formatCardBrand(brand: string): string {
