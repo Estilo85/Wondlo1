@@ -72,6 +72,133 @@ function luhnValid(cardNumber: string) {
   return sum % 10 === 0;
 }
 
+const BRAND_STYLES: Record<string, { background: string; label: string }> = {
+  Visa: { background: 'linear-gradient(135deg, #1A1F71 0%, #4B53B0 100%)', label: 'VISA' },
+  Mastercard: { background: 'linear-gradient(135deg, #231F20 0%, #46424F 100%)', label: 'Mastercard' },
+  Amex: { background: 'linear-gradient(135deg, #006FCF 0%, #40A0E0 100%)', label: 'AMEX' },
+  Discover: { background: 'linear-gradient(135deg, #B5651D 0%, #F0A500 100%)', label: 'DISCOVER' },
+};
+
+function CardVisual({
+  brand,
+  cardholder,
+  cardNumber,
+  expiry,
+  cvc,
+  showBack,
+}: {
+  brand: string;
+  cardholder: string;
+  cardNumber: string;
+  expiry: string;
+  cvc: string;
+  showBack: boolean;
+}) {
+  const cfg =
+    BRAND_STYLES[brand] ?? {
+      background: 'linear-gradient(135deg, #7E6BB3 0%, #2B2740 100%)',
+      label: 'Card',
+    };
+  const digits = cardNumber.replace(/\D/g, '').slice(0, 16);
+  const filled = (digits + '••••••••••••••••').slice(0, 16);
+  const groups = [0, 1, 2, 3].map((i) => filled.slice(i * 4, i * 4 + 4));
+  const displayCvc = (cvc.replace(/\D/g, '').slice(0, 4) + '•••').slice(0, 4);
+
+  return (
+    <div className="mx-auto mb-6 w-full max-w-[340px]" style={{ perspective: '1000px' }}>
+      <div
+        className={`relative w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+          showBack ? '[transform:rotateY(180deg)]' : ''
+        }`}
+        style={{ aspectRatio: '85.6 / 53.98' }}
+      >
+        <div
+          className="absolute inset-0 rounded-2xl p-4 sm:p-5"
+          style={{
+            background: cfg.background,
+            backfaceVisibility: 'hidden',
+            boxShadow: '0 18px 40px rgba(43, 39, 64, 0.35)',
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <svg className="h-8 w-8" viewBox="0 0 48 32" aria-hidden="true">
+              <rect x="1" y="1" width="46" height="30" rx="6" fill="#D9A85E" stroke="#A97B3A" />
+              <path d="M1 12h46M15 7v18" stroke="#A97B3A" strokeWidth="1.5" fill="none" />
+            </svg>
+
+            {brand === 'Mastercard' ? (
+              <span className="flex items-end gap-1">
+                <span className="h-6 w-6 rounded-full bg-[#EB001B] mix-blend-screen" />
+                <span className="h-6 w-6 rounded-full bg-[#F79E1B] mix-blend-screen" />
+              </span>
+            ) : (
+              <span
+                className={`font-bold italic text-white ${
+                  brand === 'Visa' ? 'text-xl tracking-wider' : 'text-sm tracking-widest'
+                }`}
+              >
+                {cfg.label}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-5 flex items-center justify-center gap-1 font-inter text-base font-semibold tracking-[0.14em] text-white sm:text-lg">
+            {groups.map((group) => (
+              <span key={group} className="flex items-center gap-[2px]">
+                {group.split('').map((ch, ci) => (
+                  <span key={ci} className={ch === '•' ? 'text-white/35' : ''}>
+                    {ch}
+                  </span>
+                ))}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-5 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-inter text-[8px] uppercase tracking-widest text-white/60">
+                Card holder
+              </p>
+              <p className="truncate font-inter text-xs font-medium text-white">
+                {cardholder.trim() || 'YOUR NAME'}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="font-inter text-[8px] uppercase tracking-widest text-white/60">
+                Expires
+              </p>
+              <p className="font-inter text-xs font-medium text-white">{expiry || 'MM/YY'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="absolute inset-0 rounded-2xl"
+          style={{
+            background: cfg.background,
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            boxShadow: '0 18px 40px rgba(43, 39, 64, 0.35)',
+          }}
+        >
+          <div className="mt-5 h-9 w-full bg-[#14120F]" />
+          <div className="mx-4 mt-4 flex items-center gap-3">
+            <div className="flex-1 rounded-sm bg-white px-3 py-2 font-inter text-xs italic text-[#2B2740]">
+              {cardholder.trim() || 'Signed'}
+            </div>
+            <div className="rounded-sm bg-[#E8E6F0] px-2 py-2 font-inter text-xs font-bold tracking-widest text-[#2B2740]">
+              {displayCvc}
+            </div>
+          </div>
+          <p className="mx-4 mt-3 font-inter text-[8px] uppercase tracking-widest text-white/60">
+            Security code · {cfg.label}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const inputClass =
   'w-full rounded-lg border border-[#EDE7FB] bg-white px-4 py-3 font-inter text-sm text-[#2B2740] outline-none transition-all duration-200 placeholder:text-[#9A95A8] focus:border-[#7E6BB3] focus:ring-2 focus:ring-[#EDE7FB]';
 
@@ -88,6 +215,7 @@ function CheckoutContent() {
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
+  const [showCardBack, setShowCardBack] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'declined'>('idle');
   const [orderRef, setOrderRef] = useState('');
@@ -382,6 +510,15 @@ function CheckoutContent() {
               boxShadow: '0 8px 30px rgba(43, 39, 64, 0.20)',
             }}
           >
+            <CardVisual
+              brand={brand}
+              cardholder={cardholder}
+              cardNumber={cardNumber}
+              expiry={expiry}
+              cvc={cvc}
+              showBack={showCardBack}
+            />
+
             <h1 className="text-lg font-bold text-[#2B2740]">Payment details</h1>
 
             <form onSubmit={handlePay} className="mt-6 space-y-5" noValidate>
@@ -495,6 +632,8 @@ function CheckoutContent() {
                     inputMode="numeric"
                     value={cvc}
                     onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    onFocus={() => setShowCardBack(true)}
+                    onBlur={() => setShowCardBack(false)}
                     placeholder="123"
                     className={inputClass}
                   />
