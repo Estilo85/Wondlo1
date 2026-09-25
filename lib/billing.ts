@@ -64,3 +64,16 @@ export function formatCardBrand(brand: string): string {
   };
   return map[brand] ?? brand;
 }
+
+export type BillingAddress = { line1: string; city: string; postal: string; country: string };
+
+export function sanitizeBillingAddress(input: unknown): BillingAddress | null {
+  if (!input || typeof input !== 'object') return null;
+  const a = input as Record<string, unknown>;
+  const country = typeof a.country === 'string' && a.country.trim() ? a.country.trim().slice(0, 2) : '';
+  const line1 = typeof a.line1 === 'string' && a.line1.trim() ? a.line1.trim().slice(0, 120) : '';
+  const city = typeof a.city === 'string' && a.city.trim() ? a.city.trim().slice(0, 80) : '';
+  const postal = typeof a.postal === 'string' && a.postal.trim() ? a.postal.trim().slice(0, 20) : '';
+  if (!line1 || !country) return null;
+  return { line1, city, postal, country };
+}

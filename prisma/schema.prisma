@@ -26,31 +26,33 @@ model User {
 }
 
 model SavedCard {
-  id        String   @id @default(uuid())
-  userId    String
-  brand     String
-  last4     String
-  expMonth  Int
-  expYear   Int
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  userId         String
+  brand          String
+  last4          String
+  expMonth       Int
+  expYear        Int
+  isDefault      Boolean  @default(false)
+  billingAddress Json?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model Purchase {
-  id         String   @id @default(uuid())
-  userId     String
-  plan       String
-  amountPence Int
-  currency   String   @default("GBP")
-  orderRef   String   @unique
-  cardBrand  String?
-  cardLast4  String?
-  status     String   @default("paid")
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  userId         String
+  plan           String
+  amountPence    Int
+  currency       String   @default("GBP")
+  orderRef       String   @unique
+  cardBrand      String?
+  cardLast4      String?
+  billingAddress Json?
+  status         String   @default("paid")
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
 }

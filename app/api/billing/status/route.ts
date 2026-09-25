@@ -43,6 +43,7 @@ export async function GET(req: Request) {
         expMonth: card.expMonth,
         expYear: card.expYear,
         isDefault: card.isDefault,
+        billingAddress: card.billingAddress,
       })),
       purchases: user.purchases.map((purchase) => ({
         id: purchase.id,
@@ -54,6 +55,7 @@ export async function GET(req: Request) {
         createdAt: purchase.createdAt,
         cardBrand: purchase.cardBrand,
         cardLast4: purchase.cardLast4,
+        billingAddress: purchase.billingAddress,
       })),
     });
   } catch (error) {

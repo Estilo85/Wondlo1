@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { adminAuth } from '@/lib/firebase-admin';
+import { sanitizeBillingAddress } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 
@@ -38,7 +39,7 @@ async function authenticate(token: string) {
 
 export async function POST(req: Request) {
   try {
-    const { token, card } = await req.json();
+    const { token, card, billingAddress } = await req.json();
     const decoded = await authenticate(token ?? '');
     if (!decoded) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -46,6 +47,8 @@ export async function POST(req: Request) {
     if (!isValidCard(card)) {
       return NextResponse.json({ error: 'Invalid card details' }, { status: 400 });
     }
+
+    const address = sanitizeBillingAddress(billingAddress);
 
     const user = await prisma.user.findUnique({
       where: { firebaseId: decoded.uid },
@@ -74,6 +77,7 @@ export async function POST(req: Request) {
         expMonth: card.expMonth,
         expYear: card.expYear,
         isDefault: user.savedCards.length === 0,
+        ...(address ? { billingAddress: address } : {}),
       },
     });
 

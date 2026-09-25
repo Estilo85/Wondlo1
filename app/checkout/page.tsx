@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import Footer from '@/components/Footer';
 import CurrencySelector, { useCurrency } from '@/components/CurrencySelector';
-import { formatConverted } from '@/lib/currency';
+import { formatConverted, COUNTRIES } from '@/lib/currency';
 import { auth } from '@/lib/firebase-client';
 
 const PAYMENT_LINKS = {
@@ -50,6 +50,7 @@ type SavedCard = {
   expMonth: number;
   expYear: number;
   isDefault: boolean;
+  billingAddress?: { line1: string; city: string; postal: string; country: string } | null;
 };
 
 function formatCardNumber(value: string) {
@@ -233,6 +234,8 @@ function CheckoutContent() {
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
   const [showCardBack, setShowCardBack] = useState(false);
+  const [billing, setBilling] = useState({ line1: '', city: '', postal: '', country: 'GB' });
+  const [saveCard, setSaveCard] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'declined'>('idle');
   const [orderRef, setOrderRef] = useState('');
@@ -259,7 +262,18 @@ function CheckoutContent() {
           const data = await res.json();
           const cards = data.cards ?? [];
           setSavedCards(cards);
-          setSelectedCardId(cards.find((card: SavedCard) => card.isDefault)?.id ?? cards[0]?.id ?? '');
+          const defaultCard = cards.find((card: SavedCard) => card.isDefault) ?? cards[0];
+          if (defaultCard) {
+            setSelectedCardId(defaultCard.id);
+            if (defaultCard.billingAddress) {
+              setBilling({
+                line1: defaultCard.billingAddress.line1 ?? '',
+                city: defaultCard.billingAddress.city ?? '',
+                postal: defaultCard.billingAddress.postal ?? '',
+                country: defaultCard.billingAddress.country ?? 'GB',
+              });
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to load saved cards:', error);
@@ -282,6 +296,9 @@ function CheckoutContent() {
     const next: Record<string, string> = {};
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       next.email = 'Enter a valid email address for your receipt.';
+    }
+    if (billing.line1.trim().length < 3) {
+      next.line1 = 'Enter your billing address.';
     }
     if (selectedCardId) {
       setErrors(next);
@@ -332,7 +349,14 @@ function CheckoutContent() {
           const res = await fetch('/api/billing/purchase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, plan: planKey, email, currency, savedCardId: selectedCardId }),
+            body: JSON.stringify({
+              token,
+              plan: planKey,
+              email,
+              currency,
+              savedCardId: selectedCardId,
+              billingAddress: billing,
+            }),
           });
           const data = await res.json();
           if (!res.ok || !data.orderRef) {
@@ -344,6 +368,37 @@ function CheckoutContent() {
         } catch (error) {
           console.error('Failed to use saved payment method:', error);
           setStatus('declined');
+        }
+      })();
+      return;
+    }
+
+    if (saveCard) {
+      setStatus('processing');
+      void (async () => {
+        try {
+          const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
+          if (token) {
+            const expDigits = expiry.replace(/\D/g, '');
+            await fetch('/api/billing/card', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                token,
+                card: {
+                  brand: brand || 'Card',
+                  last4: cardNumber.replace(/\D/g, '').slice(-4),
+                  expMonth: Number(expDigits.slice(0, 2)),
+                  expYear: 2000 + Number(expDigits.slice(2)),
+                },
+                billingAddress: billing,
+              }),
+            });
+          }
+        } catch (error) {
+          console.error('Failed to save card:', error);
+        } finally {
+          window.open(`${plan.paymentLink}?prefilled_email=${encodeURIComponent(email.trim())}`, '_self');
         }
       })();
       return;
@@ -613,6 +668,14 @@ function CheckoutContent() {
                             onChange={() => {
                               setSelectedCardId(card.id);
                               setUseDifferentPaymentMethod(false);
+                              if (card.billingAddress) {
+                                setBilling({
+                                  line1: card.billingAddress.line1 ?? '',
+                                  city: card.billingAddress.city ?? '',
+                                  postal: card.billingAddress.postal ?? '',
+                                  country: card.billingAddress.country ?? 'GB',
+                                });
+                              }
                             }}
                             className="accent-[#7E6BB3]"
                           />
@@ -745,6 +808,23 @@ function CheckoutContent() {
                   )}
                 </div>
               </div>
+
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#EDE7FB] bg-[#FAF9FE] p-3">
+                <input
+                  type="checkbox"
+                  checked={saveCard}
+                  onChange={(e) => setSaveCard(e.target.checked)}
+                  className="h-4 w-4 accent-[#7E6BB3]"
+                />
+                <span>
+                  <span className="block font-inter text-sm font-semibold text-[#2B2740]">
+                    Save this card for next time
+                  </span>
+                  <span className="block font-inter text-xs text-[#4A4560]">
+                    Pay faster next time with your saved card.
+                  </span>
+                </span>
+              </label>
                 </>
               )}
 
@@ -762,6 +842,79 @@ function CheckoutContent() {
                   Use a saved payment method instead
                 </button>
               )}
+
+              <div
+                className="rounded-xl p-4"
+                style={{
+                  background: 'linear-gradient(160deg, #F3EDFC 0%, #E9E1F9 100%)',
+                  border: '0.1px solid rgba(126, 107, 179, 0.25)',
+                }}
+              >
+                <p className="mb-3 font-poppins text-xs font-semibold text-[#7E6BB3]">
+                  Billing Address
+                </p>
+
+                <div>
+                  <label className="mb-1.5 block font-poppins text-xs font-semibold text-[#2B2740]">
+                    Street Address
+                  </label>
+                  <input
+                    type="text"
+                    value={billing.line1}
+                    onChange={(e) => setBilling((b) => ({ ...b, line1: e.target.value }))}
+                    placeholder="123 Adventure Road"
+                    className={inputClass}
+                  />
+                  {errors.line1 && (
+                    <p className="mt-1 font-inter text-xs text-[#C51D14]">{errors.line1}</p>
+                  )}
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block font-poppins text-xs font-semibold text-[#2B2740]">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={billing.city}
+                      onChange={(e) => setBilling((b) => ({ ...b, city: e.target.value }))}
+                      placeholder="Your city"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block font-poppins text-xs font-semibold text-[#2B2740]">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      value={billing.postal}
+                      onChange={(e) => setBilling((b) => ({ ...b, postal: e.target.value }))}
+                      placeholder="e.g. EC1A 1BB"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="mb-1.5 block font-poppins text-xs font-semibold text-[#2B2740]">
+                    Country
+                  </label>
+                  <select
+                    value={billing.country}
+                    onChange={(e) => setBilling((b) => ({ ...b, country: e.target.value }))}
+                    className={`${inputClass} cursor-pointer`}
+                  >
+                    {COUNTRIES.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
               {status === 'declined' && (
                 <p className="rounded-lg bg-red-50 p-3 font-inter text-xs text-[#C51D14]">
@@ -787,7 +940,9 @@ function CheckoutContent() {
                   <>
                     {selectedCardId
                       ? `Pay ${priceLabel}${plan.cadence === '/month' ? ' Today' : ` ${plan.cadence}`}`
-                      : 'Continue To Secure Payment'}
+                      : saveCard
+                        ? 'Save Card & Continue To Secure Payment'
+                        : 'Continue To Secure Payment'}
                   </>
                 )}
               </button>

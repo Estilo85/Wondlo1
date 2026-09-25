@@ -8,7 +8,7 @@ import { jsPDF } from 'jspdf';
 
 import Footer from '@/components/Footer';
 import CurrencySelector, { useCurrency } from '@/components/CurrencySelector';
-import { formatConverted } from '@/lib/currency';
+import { formatConverted, COUNTRIES } from '@/lib/currency';
 import { auth } from '@/lib/firebase-client';
 import { formatMoney, formatCardBrand, PLANS } from '@/lib/billing';
 
@@ -31,6 +31,7 @@ type Purchase = {
   createdAt: string;
   cardBrand: string | null;
   cardLast4: string | null;
+  billingAddress?: { line1: string; city: string; postal: string; country: string } | null;
 };
 
 type BillingResponse = {
@@ -382,6 +383,14 @@ export default function BillingPage() {
       ['Billed to', `${user.name}`],
       [user.email, ''],
     ];
+    const address = purchase.billingAddress;
+    if (address) {
+      const countryName = COUNTRIES.find((country) => country.code === address.country)?.name ?? address.country;
+      const cityPostal = [address.city, address.postal].filter(Boolean).join(', ');
+      if (address.line1) leftCol.push([address.line1, '']);
+      if (cityPostal) leftCol.push([cityPostal, '']);
+      if (countryName) leftCol.push([countryName, '']);
+    }
     setText(GRAY);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
