@@ -1,18 +1,25 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { onAuthStateChanged } from 'firebase/auth';
 import Footer from '@/components/Footer';
 import CurrencySelector, { useCurrency } from '@/components/CurrencySelector';
 import { formatConverted } from '@/lib/currency';
 import { auth } from '@/lib/firebase-client';
+
+const PAYMENT_LINKS = {
+  'pay-as-you-go': 'https://buy.stripe.com/7sY00j64s5NKdd50aLcfK07',
+  starter: 'https://buy.stripe.com/5kQeVddwUdgc8WPf5FcfK08',
+} as const;
 
 const PLANS = {
   'pay-as-you-go': {
     name: 'Pay As You Go',
     pricePence: 300,
     cadence: '/search',
+    paymentLink: PAYMENT_LINKS['pay-as-you-go'],
     features: [
       'One Search',
       'Adventure Preparedness',
@@ -24,6 +31,7 @@ const PLANS = {
     name: 'Starter Plan',
     pricePence: 1500,
     cadence: '/month',
+    paymentLink: PAYMENT_LINKS.starter,
     features: [
       'Seven Searches / Month',
       'Adventure Preparedness',
@@ -34,6 +42,15 @@ const PLANS = {
 } as const;
 
 type PlanKey = keyof typeof PLANS;
+
+type SavedCard = {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+};
 
 function formatCardNumber(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 16);
@@ -143,10 +160,10 @@ function CardVisual({
           </div>
 
           <div className="mt-5 flex items-center justify-center gap-1 font-inter text-base font-semibold tracking-[0.14em] text-white sm:text-lg">
-            {groups.map((group) => (
-              <span key={group} className="flex items-center gap-[2px]">
-                {group.split('').map((ch, ci) => (
-                  <span key={ci} className={ch === '•' ? 'text-white/35' : ''}>
+            {groups.map((group, groupIndex) => (
+              <span key={groupIndex} className="flex items-center gap-[2px]">
+                {group.split('').map((ch, charIndex) => (
+                  <span key={`${groupIndex}-${charIndex}`} className={ch === '•' ? 'text-white/35' : ''}>
                     {ch}
                   </span>
                 ))}
@@ -200,7 +217,7 @@ function CardVisual({
 }
 
 const inputClass =
-  'w-full rounded-lg border border-[#EDE7FB] bg-white px-4 py-3 font-inter text-sm text-[#2B2740] outline-none transition-all duration-200 placeholder:text-[#9A95A8] focus:border-[#7E6BB3] focus:ring-2 focus:ring-[#EDE7FB]';
+  'w-full rounded-lg border border-[#EDE7FB] bg-[#FAF9FE] px-4 py-3 font-inter text-sm text-[#2B2740] outline-none transition-all duration-200 placeholder:text-[#9A95A8] focus:border-[#7E6BB3] focus:ring-2 focus:ring-[#EDE7FB]';
 
 function CheckoutContent() {
   const router = useRouter();
@@ -219,6 +236,40 @@ function CheckoutContent() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'declined'>('idle');
   const [orderRef, setOrderRef] = useState('');
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState('');
+  const [savedCardsLoaded, setSavedCardsLoaded] = useState(!auth);
+  const [useDifferentPaymentMethod, setUseDifferentPaymentMethod] = useState(false);
+
+  useEffect(() => {
+    if (!auth) {
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setSavedCardsLoaded(true);
+        return;
+      }
+
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch(`/api/billing/status?token=${encodeURIComponent(token)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const cards = data.cards ?? [];
+          setSavedCards(cards);
+          setSelectedCardId(cards.find((card: SavedCard) => card.isDefault)?.id ?? cards[0]?.id ?? '');
+        }
+      } catch (error) {
+        console.error('Failed to load saved cards:', error);
+      } finally {
+        setSavedCardsLoaded(true);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   if (!plan) {
     router.replace('/payments');
@@ -231,6 +282,10 @@ function CheckoutContent() {
     const next: Record<string, string> = {};
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       next.email = 'Enter a valid email address for your receipt.';
+    }
+    if (selectedCardId) {
+      setErrors(next);
+      return Object.keys(next).length === 0;
     }
     if (cardholder.trim().length < 2) {
       next.cardholder = 'Enter the name on the card.';
@@ -264,47 +319,37 @@ function CheckoutContent() {
     e.preventDefault();
     if (status === 'processing' || !validate()) return;
 
-    const declined = cardNumber.replace(/\D/g, '').endsWith('0002');
-    setStatus('processing');
+    if (selectedCardId) {
+      setStatus('processing');
+      void (async () => {
+        try {
+          const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
+          if (!token) {
+            setStatus('declined');
+            return;
+          }
 
-    setTimeout(async () => {
-      if (declined) {
-        setStatus('declined');
-        return;
-      }
-
-      let ref = `WL-${Math.random().toString(36).slice(2, 8).toUpperCase()}${Date.now().toString().slice(-4)}`;
-
-      try {
-        const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
-        if (token) {
-          const expDigits = expiry.replace(/\D/g, '');
           const res = await fetch('/api/billing/purchase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              token,
-              plan: planKey,
-              email,
-              currency,
-              card: {
-                brand: brand || 'Card',
-                last4: cardNumber.replace(/\D/g, '').slice(-4),
-                expMonth: Number(expDigits.slice(0, 2)),
-                expYear: 2000 + Number(expDigits.slice(2)),
-              },
-            }),
+            body: JSON.stringify({ token, plan: planKey, email, currency, savedCardId: selectedCardId }),
           });
           const data = await res.json();
-          if (res.ok && data.orderRef) ref = data.orderRef;
+          if (!res.ok || !data.orderRef) {
+            setStatus('declined');
+            return;
+          }
+          setOrderRef(data.orderRef);
+          setStatus('success');
+        } catch (error) {
+          console.error('Failed to use saved payment method:', error);
+          setStatus('declined');
         }
-      } catch (error) {
-        console.error('Failed to record purchase:', error);
-      }
+      })();
+      return;
+    }
 
-      setOrderRef(ref);
-      setStatus('success');
-    }, 2200);
+    window.open(`${plan.paymentLink}?prefilled_email=${encodeURIComponent(email.trim())}`, '_self');
   };
 
   if (status === 'success') {
@@ -437,14 +482,14 @@ function CheckoutContent() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr]">
           <div
-            className="order-2 lg:order-1 rounded-3xl p-6 sm:p-8"
+            className="order-1 lg:order-1 rounded-3xl p-6 sm:p-8"
             style={{
               background: 'linear-gradient(160deg, #F3EDFC 0%, #E3D8F6 100%)',
               border: '0.1px solid rgba(126, 107, 179, 0.25)',
               boxShadow: '0 8px 30px rgba(126, 107, 179, 0.20)',
             }}
           >
-            <h2 className="text-lg font-bold text-[#7E6BB3]">Order summary</h2>
+            <h2 className="text-lg font-bold text-[#7E6BB3]">Order Summary</h2>
 
             <div
               className="mt-4 flex items-center justify-between rounded-xl p-4"
@@ -495,7 +540,7 @@ function CheckoutContent() {
                 <span>Included</span>
               </div>
               <div className="mt-2 flex justify-between border-t border-[#EDE7FB] pt-3 font-poppins font-bold text-[#7E6BB3]">
-                <span>Total due today</span>
+                <span>Total Due Today</span>
                 <span>
                   {priceLabel}
                   {plan.cadence}
@@ -505,28 +550,30 @@ function CheckoutContent() {
           </div>
 
           <div
-            className="order-1 lg:order-2 rounded-3xl p-6 sm:p-8"
+            className="order-2 lg:order-2 rounded-3xl p-6 sm:p-8"
             style={{
               backgroundColor: '#F6F4FE',
               border: '0.1px solid rgba(43, 39, 64, 0.10)',
               boxShadow: '0 8px 30px rgba(43, 39, 64, 0.20)',
             }}
           >
-            <CardVisual
-              brand={brand}
-              cardholder={cardholder}
-              cardNumber={cardNumber}
-              expiry={expiry}
-              cvc={cvc}
-              showBack={showCardBack}
-            />
+            {(!savedCardsLoaded || savedCards.length === 0 || useDifferentPaymentMethod) && (
+              <CardVisual
+                brand={brand}
+                cardholder={cardholder}
+                cardNumber={cardNumber}
+                expiry={expiry}
+                cvc={cvc}
+                showBack={showCardBack}
+              />
+            )}
 
-            <h1 className="text-lg font-bold text-[#2B2740]">Payment details</h1>
+            <h1 className="text-lg font-bold text-[#2B2740]">Payment Details</h1>
 
             <form onSubmit={handlePay} className="mt-6 space-y-5" noValidate>
               <div>
                 <label className="mb-1.5 block font-poppins text-xs font-semibold text-[#2B2740]">
-                  Email for receipt
+                  Email for Receipt
                 </label>
 
                 <input
@@ -542,9 +589,62 @@ function CheckoutContent() {
                 )}
               </div>
 
+              {savedCardsLoaded && savedCards.length > 0 && !useDifferentPaymentMethod && (
+                <div>
+                  <p className="mb-1.5 block font-poppins text-xs font-semibold text-[#2B2740]">
+                    Select saved payment method
+                  </p>
+                  <div className="space-y-2">
+                    {savedCards.map((card) => (
+                      <label
+                        key={card.id}
+                        className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-colors ${
+                          selectedCardId === card.id
+                            ? 'border-[#7E6BB3] bg-[#EDE7FB]'
+                            : 'border-[#EDE7FB] bg-[#FAF9FE]'
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="saved-payment-method"
+                            value={card.id}
+                            checked={selectedCardId === card.id}
+                            onChange={() => {
+                              setSelectedCardId(card.id);
+                              setUseDifferentPaymentMethod(false);
+                            }}
+                            className="accent-[#7E6BB3]"
+                          />
+                          <span className="font-inter text-sm font-semibold text-[#2B2740]">
+                            {card.brand} •••• {card.last4}
+                          </span>
+                        </span>
+                        <span className="font-inter text-xs text-[#4A4560]">
+                          {String(card.expMonth).padStart(2, '0')}/{String(card.expYear).slice(-2)}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCardId('');
+                      setUseDifferentPaymentMethod(true);
+                      setErrors({});
+                    }}
+                    className="mt-3 cursor-pointer text-xs font-semibold text-[#7E6BB3] hover:underline"
+                  >
+                    Use a different payment method
+                  </button>
+                </div>
+              )}
+
+              {(!savedCardsLoaded || savedCards.length === 0 || useDifferentPaymentMethod) && (
+                <>
               <div>
                 <label className="mb-1.5 block font-poppins text-xs font-semibold text-[#2B2740]">
-                  Cardholder name
+                  Cardholder Name
                 </label>
 
                 <input
@@ -563,7 +663,7 @@ function CheckoutContent() {
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <label className="block font-poppins text-xs font-semibold text-[#2B2740]">
-                    Card number
+                    Card Number
                   </label>
 
                   {brand && (
@@ -645,6 +745,23 @@ function CheckoutContent() {
                   )}
                 </div>
               </div>
+                </>
+              )}
+
+              {savedCardsLoaded && savedCards.length > 0 && useDifferentPaymentMethod && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const defaultCard = savedCards.find((card) => card.isDefault) ?? savedCards[0];
+                    setSelectedCardId(defaultCard.id);
+                    setUseDifferentPaymentMethod(false);
+                    setErrors({});
+                  }}
+                  className="cursor-pointer text-xs font-semibold text-[#7E6BB3] hover:underline"
+                >
+                  Use a saved payment method instead
+                </button>
+              )}
 
               {status === 'declined' && (
                 <p className="rounded-lg bg-red-50 p-3 font-inter text-xs text-[#C51D14]">
@@ -654,8 +771,9 @@ function CheckoutContent() {
 
               <button
                 type="submit"
-                disabled={status === 'processing'}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#7E6BB3] text-xs font-semibold text-white transition-colors hover:bg-[#68559D] disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={status === 'processing' || !savedCardsLoaded}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                style={{ background: 'linear-gradient(90deg, #7E6BB3 25%, #2B2740 100%)' }}
               >
                 {status === 'processing' ? (
                   <>
@@ -667,8 +785,9 @@ function CheckoutContent() {
                   </>
                 ) : (
                   <>
-                    Pay {priceLabel}
-                    {plan.cadence === '/month' ? ' today' : ` ${plan.cadence}`}
+                    {selectedCardId
+                      ? `Pay ${priceLabel}${plan.cadence === '/month' ? ' Today' : ` ${plan.cadence}`}`
+                      : 'Continue To Secure Payment'}
                   </>
                 )}
               </button>

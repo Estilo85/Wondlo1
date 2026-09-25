@@ -8,7 +8,6 @@ export default function PaidSidebarHeaderSection({
   onViewPreviousSearches,
   onGetStarted,
   onGet,
-  onBook,
   onClose,
 }: {
   userName?: string;
@@ -16,7 +15,6 @@ export default function PaidSidebarHeaderSection({
   onViewPreviousSearches?: () => void;
   onGetStarted?: () => void;
   onGet?: () => void;
-  onBook?: () => void;
   onClose?: () => void;
 }) {
   const firstName = userName.trim().split(/\s+/)[0] || '';
@@ -112,7 +110,13 @@ export default function PaidSidebarHeaderSection({
           </span>
           <button
             type="button"
-            onClick={onBook}
+            onClick={() =>
+              window.open(
+                'https://calendly.com/wondlo-operatorchatdiagnosis/30min',
+                '_blank',
+                'noopener,noreferrer'
+              )
+            }
             className="w-[107px] h-[28px] rounded-[10px] flex items-center justify-center gap-1.5 transition-all duration-200 hover:bg-white hover:-translate-y-0.5 cursor-pointer"
             style={actionButtonStyle}
           >

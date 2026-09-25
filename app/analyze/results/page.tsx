@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -33,6 +33,10 @@ function ResultsContent() {
   const [searchLimitMessage, setSearchLimitMessage] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisReport | null>(null);
   const [savedAnalyses, setSavedAnalyses] = useState<AnalysisReport[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<{
+    name: string;
+    description: string;
+  } | null>(null);
 
   const handleSignOut = async () => {
     if (auth) {
@@ -149,7 +153,7 @@ function ResultsContent() {
 
     addTitle('Safety Questions to Ask an Adventure Operator');
     addParagraph(`Adventure Operator: ${query}`);
-    addParagraph(`Generated: ${generatedDate}`);
+    addParagraph(`Generated: ${downloadDate}`);
     addSubtitle('Before You Book or Participate');
     addParagraph('Every adventure activity carries some level of risk. A responsible operator should be able to explain how they prepare for risks, protect participants, and respond when something unexpected happens.');
     addParagraph('You do not need to ask every question. Choose the questions most relevant to your trip and look for clear, specific answers rather than vague assurances.');
@@ -210,16 +214,42 @@ function ResultsContent() {
 
   const query = searchParams.get('q') || 'Summit Trails Expeditions';
 
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
+  const storageKey = `wondlo-search-date:${query.trim().toLowerCase()}`;
+  const searchDate = useMemo(() => {
+    if (typeof window === 'undefined') return null;
 
-  const generatedDate = today.toLocaleDateString('en-US', {
+    const storedDate = window.localStorage.getItem(storageKey);
+    if (!storedDate) return null;
+
+    const parsedDate = new Date(storedDate);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (window.localStorage.getItem(storageKey)) {
+      return;
+    }
+
+    window.localStorage.setItem(storageKey, today.toISOString());
+  }, [storageKey, today]);
+
+  const originalSearchDate = searchDate ?? today;
+
+  const generatedDate = originalSearchDate.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 
-  const coveredUpTo = new Date(today);
-  coveredUpTo.setDate(today.getDate() - 1);
+  const downloadDate = today.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const coveredUpTo = new Date(originalSearchDate);
+  coveredUpTo.setDate(originalSearchDate.getDate() - 1);
 
   const coveredUpToDate = coveredUpTo.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -738,7 +768,7 @@ function ResultsContent() {
                           fontSize="7"
                           fontWeight="bold"
                         >
-                          {today.getDate()}
+                          {originalSearchDate.getDate()}
                         </text>
                       </svg>
 
@@ -1248,7 +1278,7 @@ function ResultsContent() {
               </h2>
 
               <p className="mt-2 font-inter text-[18px] sm:text-[22px] leading-[24px] sm:leading-[27px] font-medium text-[#000000]">
-                The operator satisfies our safety framework for (trip-type)
+                The operator satisfies our safety framework for adventure trekking and climbing
                 safety.
               </p>
             </div>
@@ -1282,6 +1312,9 @@ function ResultsContent() {
             <div className="mt-3 grid grid-cols-2 gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-5 sm:px-4 md:px-8">
               {[
                 {
+                  name: 'Safety Plan',
+                  description:
+                    'A safety plan can show how the operator identifies hazards, controls risks, prepares participants, and manages emergencies. It helps a traveller assess whether safety procedures are planned in advance rather than handled only when something goes wrong.',
                   title: (
                     <>
                       Safety
@@ -1320,6 +1353,9 @@ function ResultsContent() {
                   ),
                 },
                 {
+                  name: 'Equipment Inspection Records',
+                  description:
+                    'Equipment inspection records can show whether safety-critical equipment is regularly checked, maintained, repaired, or removed from use when defects are found. This helps a traveller assess how consistently the operator manages equipment-related risks.',
                   title: (
                     <>
                       Equipment
@@ -1372,6 +1408,9 @@ function ResultsContent() {
                   ),
                 },
                 {
+                  name: 'Emergency Response Plan',
+                  description:
+                    'An emergency response plan can explain how the operator handles injuries, illness, evacuation, communication, rescue, and other serious incidents. It helps a traveller assess whether there is a clear process for responding when an activity does not go as planned.',
                   title: (
                     <>
                       Emergency
@@ -1414,6 +1453,9 @@ function ResultsContent() {
                   ),
                 },
                 {
+                  name: 'Insurance',
+                  description:
+                    'Insurance documentation can help a traveller understand what types of incidents or liabilities may be covered and whether the operator maintains the relevant protection for its activities. Insurance does not by itself prove that an activity is safely operated.',
                   title: <>Insurance</>,
                   icon: (
                     <svg
@@ -1444,6 +1486,9 @@ function ResultsContent() {
                   ),
                 },
                 {
+                  name: 'Permits & Authorisations',
+                  description:
+                    'Permits and authorisations can show whether the operator has the required approvals to conduct the activity in the relevant location or under the relevant regulations. They help a traveller check for evidence of regulatory compliance.',
                   title: (
                     <>
                       Permits &amp;
@@ -1488,9 +1533,16 @@ function ResultsContent() {
                   ),
                 },
               ].map((doc, index) => (
-                <div
+                <button
                   key={index}
-                  className="group w-full sm:w-[120px] h-[120px] rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ease-out bg-[#F6F4FE] hover:bg-white hover:-translate-y-1 hover:shadow-md"
+                  type="button"
+                  onClick={() =>
+                    setSelectedDocument({
+                      name: doc.name,
+                      description: doc.description,
+                    })
+                  }
+                  className="group w-full sm:w-[120px] h-[120px] rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ease-out bg-[#F6F4FE] hover:bg-white hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#7E6BB3]/40"
                   style={{
                     border: '0.1px solid rgba(43, 39, 64, 0.10)',
                     boxShadow: '0 3px 10px rgba(43, 39, 64, 0.05)',
@@ -1501,7 +1553,7 @@ function ResultsContent() {
                   <span className="mt-1 text-center font-inter text-[14px] leading-[15px] font-semibold text-[#000000]">
                     {doc.title}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -1603,6 +1655,66 @@ function ResultsContent() {
             </div>
           </div>
         </section>
+
+        {selectedDocument && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-[#2B2740]/40 px-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recommended-document-title"
+            onClick={() => setSelectedDocument(null)}
+          >
+            <div
+              className="w-full max-w-[520px] rounded-xl bg-white p-6 sm:p-7 shadow-xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2
+                    id="recommended-document-title"
+                    className="font-poppins text-[20px] leading-[25px] font-bold text-[#2B2740]"
+                  >
+                    {selectedDocument.name}
+                  </h2>
+
+                  <p className="mt-4 font-inter text-[15px] leading-[22px] text-[#2B2740]">
+                    {selectedDocument.description}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label="Close document explanation"
+                  onClick={() => setSelectedDocument(null)}
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[#2B2740] hover:bg-[#F6F4FE]"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedDocument(null)}
+                className="mt-6 w-full h-10 rounded-lg text-white font-inter text-[14px] font-semibold hover:opacity-90"
+                style={{
+                  background: 'linear-gradient(90deg, #7E6BB3 10%, #2B2740 100%)',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {isPaid ? (

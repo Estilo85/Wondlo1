@@ -41,7 +41,7 @@ function isValidCard(card: unknown): card is { brand: string; last4: string; exp
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { token, plan, email, card, currency: currencyInput } = body;
+    const { token, plan, email, card, savedCardId, currency: currencyInput } = body;
 
     const currency: CurrencyCode = isCurrencyCode(currencyInput) ? currencyInput : 'GBP';
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     if (typeof plan !== 'string' || !PAYABLE_PLANS.has(plan)) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
-    if (!isValidCard(card)) {
+    if (!savedCardId && !isValidCard(card)) {
       return NextResponse.json({ error: 'Invalid card details' }, { status: 400 });
     }
 
@@ -71,6 +71,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const selectedCard = savedCardId
+      ? user.savedCards.find((saved) => saved.id === savedCardId)
+      : null;
+    if (savedCardId && !selectedCard) {
+      return NextResponse.json({ error: 'Saved card not found' }, { status: 404 });
+    }
+
+    const paymentCard = selectedCard ?? card;
+
     const config = PLANS[plan as 'pay_as_you_go' | 'starter'];
     const orderRef = generateOrderRef();
     const cycleEndsAt = plan === 'starter' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : user.cycleEndsAt;
@@ -79,19 +88,19 @@ export async function POST(req: Request) {
 
     const isCardSaved = user.savedCards.some(
       (saved) =>
-        saved.brand === card.brand &&
-        saved.last4 === card.last4 &&
-        saved.expMonth === card.expMonth &&
-        saved.expYear === card.expYear
+        saved.brand === paymentCard.brand &&
+        saved.last4 === paymentCard.last4 &&
+        saved.expMonth === paymentCard.expMonth &&
+        saved.expYear === paymentCard.expYear
     );
     if (!isCardSaved) {
       await prisma.savedCard.create({
         data: {
           userId: user.id,
-          brand: card.brand,
-          last4: card.last4,
-          expMonth: card.expMonth,
-          expYear: card.expYear,
+          brand: paymentCard.brand,
+          last4: paymentCard.last4,
+          expMonth: paymentCard.expMonth,
+          expYear: paymentCard.expYear,
           isDefault: user.savedCards.length === 0,
         },
         });
@@ -115,8 +124,8 @@ export async function POST(req: Request) {
         amountPence,
         currency,
         orderRef,
-        cardBrand: card.brand,
-        cardLast4: card.last4,
+        cardBrand: paymentCard.brand,
+        cardLast4: paymentCard.last4,
         status: 'paid',
       },
     });
@@ -135,7 +144,7 @@ export async function POST(req: Request) {
       used: updatedUser.searchAllowanceUsed,
       left: Math.max(0, updatedUser.searchAllowance - updatedUser.searchAllowanceUsed),
       cycleEndsAt: updatedUser.cycleEndsAt,
-      card: { brand: card.brand, last4: card.last4 },
+      card: { brand: paymentCard.brand, last4: paymentCard.last4 },
       receiptEmail,
     });
   } catch (error) {

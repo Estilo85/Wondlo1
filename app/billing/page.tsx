@@ -48,6 +48,42 @@ type BillingResponse = {
   purchases: Purchase[];
 };
 
+function formatCardNumber(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 16);
+  return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+}
+
+function formatExpiry(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  return digits.length <= 2 ? digits : `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function detectBrand(cardNumber: string) {
+  const first = cardNumber.replace(/\D/g, '').slice(0, 2);
+  if (first.startsWith('4')) return 'Visa';
+  if (first.startsWith('5')) return 'Mastercard';
+  if (first.startsWith('3')) return 'Amex';
+  if (first.startsWith('6')) return 'Discover';
+  return 'Card';
+}
+
+function luhnValid(cardNumber: string) {
+  const digits = cardNumber.replace(/\D/g, '');
+  if (digits.length < 15) return false;
+  let sum = 0;
+  let double = false;
+  for (let index = digits.length - 1; index >= 0; index -= 1) {
+    let digit = Number(digits[index]);
+    if (double) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    double = !double;
+  }
+  return sum % 10 === 0;
+}
+
 const cardClass =
   'rounded-3xl p-6 sm:p-7 bg-[#F6F4FE]';
 const cardBorder = { border: '0.1px solid rgba(43, 39, 64, 0.10)', boxShadow: '0 8px 20px rgba(43, 39, 64, 0.06)' };
@@ -59,6 +95,16 @@ export default function BillingPage() {
   const [data, setData] = useState<BillingResponse | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [addCardOpen, setAddCardOpen] = useState(false);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editCardNumber, setEditCardNumber] = useState('');
+  const [editExpiry, setEditExpiry] = useState('');
+  const [editCardError, setEditCardError] = useState('');
+  const [cardholder, setCardholder] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvc, setCvc] = useState('');
+  const [cardError, setCardError] = useState('');
   const currency = useCurrency();
 
   const handleSignOut = async () => {
@@ -139,6 +185,124 @@ export default function BillingPage() {
       if (res.ok) await load();
     } catch (err) {
       console.error(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const editCard = async (event: React.FormEvent, cardId: string) => {
+    event.preventDefault();
+    if (!auth?.currentUser || busy) return;
+
+    const digits = editCardNumber.replace(/\D/g, '');
+    const expDigits = editExpiry.replace(/\D/g, '');
+    const month = Number(expDigits.slice(0, 2));
+    const year = 2000 + Number(expDigits.slice(2));
+    const currentMonth = new Date().getFullYear() * 12 + new Date().getMonth() + 1;
+    const cardMonth = year * 12 + month;
+
+    if (!luhnValid(editCardNumber) || digits.length > 16) {
+      setEditCardError('Enter a valid card number.');
+      return;
+    }
+    if (expDigits.length !== 4 || month < 1 || month > 12 || cardMonth < currentMonth) {
+      setEditCardError('Enter a valid expiry date.');
+      return;
+    }
+
+    setBusy(true);
+    setEditCardError('');
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/billing/card', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          cardId,
+          card: {
+            brand: detectBrand(editCardNumber),
+            last4: digits.slice(-4),
+            expMonth: month,
+            expYear: year,
+          },
+        }),
+      });
+      if (!res.ok) {
+        setEditCardError('Unable to edit this card.');
+        return;
+      }
+      setEditingCardId(null);
+      setEditCardNumber('');
+      setEditExpiry('');
+      await load();
+    } catch (err) {
+      console.error(err);
+      setEditCardError('Unable to edit this card.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveCard = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!auth?.currentUser || busy) return;
+
+    const digits = cardNumber.replace(/\D/g, '');
+    const expDigits = expiry.replace(/\D/g, '');
+    const month = Number(expDigits.slice(0, 2));
+    const year = 2000 + Number(expDigits.slice(2));
+    const currentMonth = new Date().getFullYear() * 12 + new Date().getMonth() + 1;
+    const cardMonth = year * 12 + month;
+
+    if (cardholder.trim().length < 2) {
+      setCardError('Enter the name on the card.');
+      return;
+    }
+    if (!luhnValid(cardNumber) || digits.length > 16) {
+      setCardError('Enter a valid card number.');
+      return;
+    }
+    if (expDigits.length !== 4 || month < 1 || month > 12 || cardMonth < currentMonth) {
+      setCardError('Enter a valid expiry date.');
+      return;
+    }
+    if (cvc.replace(/\D/g, '').length < 3) {
+      setCardError('Enter a valid security code.');
+      return;
+    }
+
+    setBusy(true);
+    setCardError('');
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/billing/card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          card: {
+            cardholder: cardholder.trim(),
+            brand: detectBrand(cardNumber),
+            last4: digits.slice(-4),
+            expMonth: month,
+            expYear: year,
+          },
+        }),
+      });
+      if (!res.ok) {
+        setCardError('Unable to save this card.');
+        return;
+      }
+      setCardNumber('');
+      setCardholder('');
+      setExpiry('');
+      setCvc('');
+      setAddCardOpen(false);
+      await load();
+    } catch (err) {
+      console.error(err);
+      setCardError('Unable to save this card.');
     } finally {
       setBusy(false);
     }
@@ -321,7 +485,7 @@ export default function BillingPage() {
               onClick={() => router.push('/payments')}
               className="flex h-8 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-[#7E6BB3] bg-[#7E6BB3] px-3 text-xs font-semibold text-white transition-opacity hover:opacity-90 sm:px-4"
             >
-              View plans
+              View Plans
             </button>
 
             <div className="relative flex-shrink-0">
@@ -386,16 +550,22 @@ export default function BillingPage() {
               <div
                 className="relative overflow-hidden rounded-3xl p-6 text-white sm:p-8 lg:col-span-2"
                 style={{
-                  background: 'linear-gradient(135deg, #7E6BB3 0%, #57459A 100%)',
+                  background: 'linear-gradient(135deg, #7E6BB3 0%, #2B2740 100%)',
                   boxShadow: '0 14px 34px rgba(126, 107, 179, 0.35)',
                 }}
               >
-                <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full bg-white/10" />
-                <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-[#C7B5F5]/25" />
-              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div
+                  className="pointer-events-none absolute -right-14 -top-14 z-0 h-44 w-44 rounded-full"
+                  style={{ background: 'linear-gradient(135deg, #7E6BB3 0%, #2B2740 100%)' }}
+                />
+                <div
+                  className="pointer-events-none absolute -bottom-16 -left-10 z-0 h-40 w-40 rounded-full"
+                  style={{ background: 'linear-gradient(135deg, #7E6BB3 0%, #C7B5F5 100%)' }}
+                />
+              <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold tracking-wide text-white/70">
-                    Current plan
+                    Current Plan
                   </p>
 
                   <h1 className="mt-1 text-2xl font-bold text-white">{data.label}</h1>
@@ -403,7 +573,7 @@ export default function BillingPage() {
                   <p className="mt-1 font-inter text-sm text-white/80">
                     {data.pricePence === 0
                       ? 'Your free trial includes 3 searches. No card required.'
-                      : `${data.cadence.replace('/', '')} cycle · billed securely`}
+                      : `${data.cadence.replace('/', '').replace(/^month$/, 'Month')} Cycle · Billed Securely`}
                   </p>
                 </div>
 
@@ -421,7 +591,7 @@ export default function BillingPage() {
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="relative z-10 mt-6">
                 <div className="mb-1.5 flex justify-between font-inter text-xs text-white/85">
                   <span>{data.left} searches left</span>
                   <span>{usagePercent}%</span>
@@ -435,7 +605,7 @@ export default function BillingPage() {
                 </div>
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-inter text-xs text-white/85">
+              <div className="relative z-10 mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-inter text-xs text-white/85">
                 {data.cycleEndsAt && (
                   <span>
                     Next charge:{' '}
@@ -455,12 +625,12 @@ export default function BillingPage() {
                 </span>
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="relative z-10 mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/payments"
                   className="h-10 rounded-lg bg-white px-4 py-2.5 text-xs font-bold text-[#7E6BB3] shadow-[0_4px_12px_rgba(43,39,64,0.25)] transition-transform hover:-translate-y-0.5"
                 >
-                  Change or upgrade plan
+                  Change or Upgrade Plan
                 </Link>
 
                 {data.limited && data.plan === 'free_trial' && (
@@ -483,16 +653,73 @@ export default function BillingPage() {
                       <path d="M2.5 10h19" />
                     </svg>
                   </span>
-                  Payment methods
+                  Payment Methods
                 </h2>
 
-                <Link
-                  href="/checkout?plan=pay-as-you-go"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddCardOpen((open) => !open);
+                    setCardError('');
+                  }}
                   className="rounded-full border border-[#C7B5F5] bg-white px-3 py-1.5 text-xs font-semibold text-[#7E6BB3] transition-colors hover:bg-[#EDE7FB]"
                 >
-                  + Add card
-                </Link>
+                  {addCardOpen ? 'Cancel' : '+ Add Card'}
+                </button>
               </div>
+
+              {addCardOpen && (
+                <form onSubmit={saveCard} className="mt-4 space-y-3 rounded-2xl bg-[#FAF9FE] p-4" style={{ border: '0.1px solid rgba(126, 107, 179, 0.15)' }}>
+                  <input
+                    type="text"
+                    value={cardholder}
+                    onChange={(event) => setCardholder(event.target.value.replace(/\d/g, ''))}
+                    placeholder="Cardholder name"
+                    aria-label="Cardholder name"
+                    className="w-full rounded-lg border border-[#EDE7FB] bg-[#FAF9FE] px-3 py-2.5 font-inter text-sm text-[#2B2740] outline-none focus:border-[#7E6BB3]"
+                  />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={cardNumber}
+                    onChange={(event) => setCardNumber(formatCardNumber(event.target.value))}
+                    placeholder="Card number"
+                    aria-label="Card number"
+                    className="w-full rounded-lg border border-[#EDE7FB] bg-[#FAF9FE] px-3 py-2.5 font-inter text-sm text-[#2B2740] outline-none focus:border-[#7E6BB3]"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={expiry}
+                      onChange={(event) => setExpiry(formatExpiry(event.target.value))}
+                      placeholder="MM/YY"
+                      aria-label="Expiry date"
+                      className="w-full rounded-lg border border-[#EDE7FB] bg-[#FAF9FE] px-3 py-2.5 font-inter text-sm text-[#2B2740] outline-none focus:border-[#7E6BB3]"
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={cvc}
+                      onChange={(event) => setCvc(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="CVC"
+                      aria-label="CVC"
+                      className="w-full rounded-lg border border-[#EDE7FB] bg-[#FAF9FE] px-3 py-2.5 font-inter text-sm text-[#2B2740] outline-none focus:border-[#7E6BB3]"
+                    />
+                  </div>
+                  {cardError && <p className="font-inter text-xs text-[#C51D14]">{cardError}</p>}
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="w-full rounded-lg px-3 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    style={{
+                      background: 'linear-gradient(90deg, #7E6BB3 10%, #2B2740 100%)',
+                    }}
+                  >
+                    {busy ? 'Saving card...' : 'Save Card'}
+                  </button>
+                </form>
+              )}
 
               {data.cards.length === 0 ? (
                 <p className="mt-6 rounded-xl bg-white p-4 text-center font-inter text-sm text-[#4A4560]" style={{ border: '0.1px solid rgba(126, 107, 179, 0.15)' }}>
@@ -503,8 +730,8 @@ export default function BillingPage() {
                   {data.cards.map((card) => (
                     <li
                       key={card.id}
-                      className="flex flex-col gap-3 rounded-2xl bg-white p-4"
-                      style={{ border: '0.1px solid rgba(126, 107, 179, 0.15)', boxShadow: '0 4px 12px rgba(126, 107, 179, 0.10)' }}
+                      className="flex flex-col gap-3 rounded-2xl p-4"
+                      style={{ background: 'linear-gradient(135deg, #EDE7FB 0%, #C7B5F5 100%)', border: '0.1px solid rgba(126, 107, 179, 0.15)', boxShadow: '0 4px 12px rgba(126, 107, 179, 0.10)' }}
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-14 items-center justify-center rounded-lg bg-[#EDE7FB] text-[#7E6BB3]">
@@ -532,6 +759,20 @@ export default function BillingPage() {
                       </div>
 
                       <div className="flex items-center gap-3 pl-1">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            setEditingCardId(card.id);
+                            setEditCardNumber('');
+                            setEditExpiry('');
+                            setEditCardError('');
+                          }}
+                          className="cursor-pointer text-xs font-semibold text-[#7E6BB3] hover:underline disabled:opacity-50"
+                        >
+                          Edit
+                        </button>
+
                         {!card.isDefault && (
                           <button
                             type="button"
@@ -552,6 +793,47 @@ export default function BillingPage() {
                           Remove
                         </button>
                       </div>
+
+                      {editingCardId === card.id && (
+                        <form onSubmit={(event) => editCard(event, card.id)} className="space-y-3 rounded-xl bg-white p-3" style={{ border: '0.1px solid rgba(126, 107, 179, 0.15)' }}>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={editCardNumber}
+                            onChange={(event) => setEditCardNumber(formatCardNumber(event.target.value))}
+                            placeholder="New card number"
+                            aria-label="New card number"
+                            className="w-full rounded-lg border border-[#EDE7FB] bg-[#FAF9FE] px-3 py-2.5 font-inter text-sm text-[#2B2740] outline-none focus:border-[#7E6BB3]"
+                          />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={editExpiry}
+                            onChange={(event) => setEditExpiry(formatExpiry(event.target.value))}
+                            placeholder="New expiry MM/YY"
+                            aria-label="New expiry date"
+                            className="w-full rounded-lg border border-[#EDE7FB] bg-[#FAF9FE] px-3 py-2.5 font-inter text-sm text-[#2B2740] outline-none focus:border-[#7E6BB3]"
+                          />
+                          {editCardError && <p className="font-inter text-xs text-[#C51D14]">{editCardError}</p>}
+                          <div className="flex gap-2">
+                            <button
+                              type="submit"
+                              disabled={busy}
+                              className="rounded-lg bg-[#7E6BB3] px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                            >
+                              {busy ? 'Saving...' : 'Save changes'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => setEditingCardId(null)}
+                              className="rounded-lg border border-[#C7B5F5] px-3 py-2 text-xs font-semibold text-[#7E6BB3] disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -24,7 +24,6 @@ interface PaidSidebarProps {
   onSelectSearch?: (query: string) => void;
   onGetStarted?: () => void;
   onGet?: () => void;
-  onBook?: () => void;
   onConsumeSearch?: () => void;
   onSignOut?: () => void;
   savedAnalyses?: SavedAnalysis[];
@@ -43,7 +42,6 @@ export default function PaidSidebar({
   onSelectSearch,
   onGetStarted,
   onGet,
-  onBook,
   onSignOut,
   savedAnalyses = [],
 }: PaidSidebarProps) {
@@ -114,7 +112,6 @@ export default function PaidSidebar({
             onViewPreviousSearches={() => setShowHistory((value) => !value)}
             onGetStarted={onGetStarted}
             onGet={onGet}
-            onBook={onBook}
             onClose={onClose}
           />
 
