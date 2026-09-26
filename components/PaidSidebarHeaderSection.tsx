@@ -6,6 +6,7 @@ export default function PaidSidebarHeaderSection({
   userName = '',
   paidSearchesLeft = 7,
   onViewPreviousSearches,
+  onViewBilling,
   onGetStarted,
   onGet,
   onClose,
@@ -13,12 +14,13 @@ export default function PaidSidebarHeaderSection({
   userName?: string;
   paidSearchesLeft?: number;
   onViewPreviousSearches?: () => void;
+  onViewBilling?: () => void;
   onGetStarted?: () => void;
   onGet?: () => void;
   onClose?: () => void;
 }) {
   const firstName = userName.trim().split(/\s+/)[0] || '';
-  const searchesLeft = Math.max(0, Math.min(7, paidSearchesLeft));
+  const searchesLeft = Math.max(0, paidSearchesLeft);
   const actionButtonStyle = {
     background: 'rgba(126, 107, 179, 0.90)',
     border: '0.5px solid #FFFFFF',
@@ -67,14 +69,16 @@ export default function PaidSidebarHeaderSection({
           </span>
         </button>
 
-        <div
-          className="w-[330px] h-[55px] px-5 rounded-xl flex items-center"
+        <button
+          type="button"
+          onClick={onViewBilling}
+          className="w-[330px] h-[55px] px-5 rounded-xl flex items-center text-left transition-all duration-200 hover:shadow-sm cursor-pointer"
           style={{ background: '#F6F4FE' }}
         >
           <span className="text-[14px] leading-[18px] font-semibold text-[#2B2740]">
             {searchesLeft} Searches Left
           </span>
-        </div>
+        </button>
 
         {[
           ['Adventure Preparedness', 'Get Started', onGetStarted],

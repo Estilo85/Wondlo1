@@ -22,6 +22,7 @@ interface PaidSidebarProps {
   paidSearchesLeft?: number;
   previousSearches?: string[];
   onSelectSearch?: (query: string) => void;
+  onSeeBilling?: () => void;
   onGetStarted?: () => void;
   onGet?: () => void;
   onConsumeSearch?: () => void;
@@ -40,12 +41,14 @@ export default function PaidSidebar({
     'Rinjani Summit Trek',
   ],
   onSelectSearch,
+  onSeeBilling,
   onGetStarted,
   onGet,
   onSignOut,
   savedAnalyses = [],
 }: PaidSidebarProps) {
   const [showHistory, setShowHistory] = useState(false);
+  const [showBilling, setShowBilling] = useState(false);
   const [authenticatedUserName, setAuthenticatedUserName] = useState('');
 
   useEffect(() => {
@@ -85,7 +88,7 @@ export default function PaidSidebar({
 
   const resolvedUserName =
     authenticatedUserName.trim() || userName?.trim() || '';
-  const resolvedPaidSearchesLeft = Math.max(0, Math.min(7, paidSearchesLeft));
+  const resolvedPaidSearchesLeft = Math.max(0, paidSearchesLeft);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/20 backdrop-blur-xs transition-opacity">
@@ -110,6 +113,7 @@ export default function PaidSidebar({
             userName={resolvedUserName}
             paidSearchesLeft={resolvedPaidSearchesLeft}
             onViewPreviousSearches={() => setShowHistory((value) => !value)}
+            onViewBilling={() => setShowBilling((value) => !value)}
             onGetStarted={onGetStarted}
             onGet={onGet}
             onClose={onClose}
@@ -152,6 +156,33 @@ export default function PaidSidebar({
               </div>
             </div>
           )}
+
+          {showBilling && (
+            <div
+              className="w-[342px] px-[6px] pt-3 pb-4"
+              style={{ background: 'rgba(126, 107, 179, 0.90)' }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  onSeeBilling?.();
+                  onClose();
+                }}
+                className="group w-[330px] min-h-[45px] px-4 rounded-xl flex items-center justify-between text-left transition-all duration-200 cursor-pointer hover:bg-white"
+                style={{
+                  background: '#F6F4FE',
+                  border: '0.5px solid rgba(43, 39, 64, 0.12)',
+                }}
+              >
+                <span className="text-[13px] leading-[17px] font-semibold text-[#000000]">
+                  See Billing
+                </span>
+                <span className="ml-3 flex-shrink-0 text-[#7E6BB3] opacity-0 group-hover:opacity-100 transition-opacity">
+                  →
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         <div
@@ -171,6 +202,10 @@ export default function PaidSidebar({
                 incidentHistory={savedAnalysis.incidents
                   .map((incident) => `${incident.date}: ${incident.title}`)
                   .join(' | ')}
+                onClick={() => {
+                  onSelectSearch?.(savedAnalysis.operatorName);
+                  onClose();
+                }}
               />
             ))}
 

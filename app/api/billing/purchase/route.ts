@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { adminAuth } from '@/lib/firebase-admin';
-import { PLANS, STARTER_SEARCHES, formatCardBrand, formatMoney, sanitizeBillingAddress } from '@/lib/billing';
+import { PLANS, STARTER_SEARCHES, formatCardBrand, formatMoney, planInfo, sanitizeBillingAddress } from '@/lib/billing';
 import { convertPence, isCurrencyCode, type CurrencyCode } from '@/lib/currency';
 import { resend } from '@/lib/resend';
 
@@ -191,6 +191,7 @@ export async function POST(req: Request) {
       console.error('Receipt email failed:', emailError);
     }
 
+    const usage = planInfo(updatedUser);
     return NextResponse.json({
       success: true,
       orderRef: purchase.orderRef,
@@ -199,9 +200,9 @@ export async function POST(req: Request) {
       cadence: config.cadence,
       amountPence: purchase.amountPence,
       currency: purchase.currency,
-      allowance: updatedUser.searchAllowance,
-      used: updatedUser.searchAllowanceUsed,
-      left: Math.max(0, updatedUser.searchAllowance - updatedUser.searchAllowanceUsed),
+      allowance: usage.allowance,
+      used: usage.used,
+      left: usage.left,
       cycleEndsAt: updatedUser.cycleEndsAt,
       card: { brand: paymentCard.brand, last4: paymentCard.last4 },
       receiptEmail,

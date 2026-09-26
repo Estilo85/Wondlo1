@@ -41,7 +41,8 @@ export default function SignInPage() {
                 ? redirect
                 : '/dashboard';
 
-            if (!redirect) {
+            const redirectPath = destination.split('?')[0];
+            if (!redirect || redirectPath === '/dashboard') {
                 const token = await credential.user.getIdToken();
                 const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`, {
                     cache: 'no-store',

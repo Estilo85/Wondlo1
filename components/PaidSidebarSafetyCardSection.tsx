@@ -7,6 +7,7 @@ export default function PaidSidebarSafetyCardSection({
   score = 85,
   status = 'Good',
   incidentHistory = 'No incidents reported',
+  onClick,
   checklistItems = [
     { title: 'Incident History', desc: '5 Years - No Reported Incidents' },
     { title: 'Equipment Maintenance', desc: 'Inspection Every 3 Months' },
@@ -17,11 +18,14 @@ export default function PaidSidebarSafetyCardSection({
   score?: number;
   status?: string;
   incidentHistory?: string;
+  onClick?: () => void;
   checklistItems?: { title: string; desc: string }[];
 }) {
   return (
-    <div
-      className="w-[342px] max-w-[342px] min-h-0 bg-[#F6F4FE] px-[25px] py-4"
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-[342px] max-w-[342px] min-h-0 bg-[#F6F4FE] px-[25px] py-4 text-left transition-all duration-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7E6BB3] cursor-pointer"
       style={{ scrollbarColor: 'rgba(126, 107, 179, 0.90) transparent' }}
     >
       <div
@@ -64,6 +68,6 @@ export default function PaidSidebarSafetyCardSection({
           background: rgba(126, 107, 179, 1);
         }
       `}</style>
-    </div>
+    </button>
   );
 }

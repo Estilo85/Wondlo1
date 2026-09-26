@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [hasPressedAnalyseAnother, setHasPressedAnalyseAnother] = useState(false);
   const [hasPreviousSearches, setHasPreviousSearches] = useState(false);
+  const [previousSearchQuery, setPreviousSearchQuery] = useState('');
   const [isPaid, setIsPaid] = useState(false);
   const [searchesLeft, setSearchesLeft] = useState(3);
   const [searchLimitMessage, setSearchLimitMessage] = useState('');
@@ -50,6 +51,7 @@ export default function DashboardPage() {
           const data = await response.json();
           const searches = data.searches ?? [];
           setHasPreviousSearches(searches.length > 0);
+          setPreviousSearchQuery(searches[0]?.query ?? '');
           setIsPaid(isPaidPlan(data.plan));
           setSearchesLeft(data.left ?? data.freeSearchesLeft ?? 3);
 
@@ -194,6 +196,21 @@ export default function DashboardPage() {
           }
           searchesRemaining={searchesLeft}
         />
+        {previousSearchQuery && (
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              onClick={() =>
+                router.push(`/analyze/results?q=${encodeURIComponent(previousSearchQuery)}`)
+              }
+              className="flex h-10 items-center gap-2 rounded-lg border border-[#7E6BB3] px-4 text-sm font-semibold text-[#FFFFFF] transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90"
+              style={{ background: 'linear-gradient(90deg, #7E6BB3 25%, #2B2740 100%)' }}
+            >
+              <span aria-hidden="true">←</span>
+              Back to Previous Results
+            </button>
+          </div>
+        )}
       </main>
 
       <Footer />

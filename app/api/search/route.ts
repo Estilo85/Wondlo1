@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { adminAuth } from '@/lib/firebase-admin';
 import { generateMockAnalysis } from '@/lib/mock-analysis';
-import { FREE_TRIAL_SEARCHES, isPaidPlan, type BillingUser } from '@/lib/billing';
+import { FREE_TRIAL_SEARCHES, isPaidPlan, planInfo, type BillingUser } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,19 +43,19 @@ async function getUser(token: string): Promise<(BillingUser & { id: string; name
 
 function usageForUser(user: BillingUser) {
   const paid = isPaidPlan(user.plan);
-  const allowance = paid ? user.searchAllowance : FREE_TRIAL_SEARCHES;
-  const used = paid ? user.searchAllowanceUsed : user.freeSearchesUsed;
-  return { paid, allowance, used, left: Math.max(0, allowance - used), limited: used >= allowance };
+  const { allowance, used, left, limited } = planInfo(user);
+  return { paid, allowance, used, left, limited };
 }
 
 function responseForUser(user: BillingUser & { name: string }) {
-  const { paid, allowance, used, left, limited } = usageForUser(user);
+  const paid = isPaidPlan(user.plan);
+  const { allowance, used, left, limited } = planInfo(user);
   return {
     name: user.name,
     plan: user.plan,
     isPaid: paid,
     searchAllowance: allowance,
-    searchAllowanceUsed: paid ? used : user.freeSearchesUsed,
+    searchAllowanceUsed: used,
     searchesLeft: left,
     paidSearchesLeft: paid ? left : 0,
     renewalAt: user.cycleEndsAt ?? null,
@@ -109,46 +109,8 @@ export async function POST(req: Request) {
       where: { userId_queryKey: { userId: user.id, queryKey } },
     });
     if (existing) {
-      const usage = usageForUser(user);
-      if (usage.limited) {
-        const message = usage.paid
-          ? 'Your search allowance for this plan is used up. Add more searches to analyse another adventure.'
-          : 'Free search limit reached';
-        return NextResponse.json(
-          { ...responseForUser(user), error: message },
-          { status: 403 }
-        );
-      }
-
-      const updatedProfile = await prisma.$transaction(async (transaction) => {
-        if (usage.paid) {
-          await transaction.user.update({
-            where: { id: user.id },
-            data: { searchAllowanceUsed: { increment: 1 } },
-          });
-        } else {
-          const updatedUser = await transaction.user.updateMany({
-            where: { id: user.id, freeSearchesUsed: usage.used },
-            data: { freeSearchesUsed: { increment: 1 } },
-          });
-          if (updatedUser.count !== 1) throw new Error('Free search limit reached');
-        }
-
-        return transaction.user.findUniqueOrThrow({
-          where: { id: user.id },
-          select: {
-            name: true,
-            plan: true,
-            searchAllowance: true,
-            searchAllowanceUsed: true,
-            freeSearchesUsed: true,
-            cycleEndsAt: true,
-          },
-        });
-      });
-
       return NextResponse.json({
-        ...responseForUser(updatedProfile),
+        ...responseForUser(user),
         created: false,
         search: { id: existing.id, query: existing.query, analysis: existing.analysis },
       }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });

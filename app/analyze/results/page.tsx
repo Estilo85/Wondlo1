@@ -33,6 +33,7 @@ function ResultsContent() {
   const [searchLimitMessage, setSearchLimitMessage] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisReport | null>(null);
   const [savedAnalyses, setSavedAnalyses] = useState<AnalysisReport[]>([]);
+  const [searchCreatedAt, setSearchCreatedAt] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<{
     name: string;
     description: string;
@@ -47,6 +48,11 @@ function ResultsContent() {
   };
 
   const downloadSafetyQuestions = () => {
+    const downloadDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -215,34 +221,14 @@ function ResultsContent() {
   const query = searchParams.get('q') || 'Summit Trails Expeditions';
 
   const today = useMemo(() => new Date(), []);
-  const storageKey = `wondlo-search-date:${query.trim().toLowerCase()}`;
-  const searchDate = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-
-    const storedDate = window.localStorage.getItem(storageKey);
-    if (!storedDate) return null;
-
-    const parsedDate = new Date(storedDate);
-    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (window.localStorage.getItem(storageKey)) {
-      return;
-    }
-
-    window.localStorage.setItem(storageKey, today.toISOString());
-  }, [storageKey, today]);
-
-  const originalSearchDate = searchDate ?? today;
+  const parsedSearchDate = searchCreatedAt ? new Date(searchCreatedAt) : null;
+  const originalSearchDate = parsedSearchDate && !Number.isNaN(parsedSearchDate.getTime())
+    ? parsedSearchDate
+    : analysis?.reportGeneratedDate
+      ? new Date(analysis.reportGeneratedDate)
+      : today;
 
   const generatedDate = originalSearchDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  const downloadDate = today.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -424,9 +410,16 @@ function ResultsContent() {
                 : 'You have reached your 3 free searches. Upgrade to analyse another adventure.'
             );
           }
-          const reports = (data.searches ?? []).map(
-            (search: { analysis: AnalysisReport }) => search.analysis
+          const searches = (data.searches ?? []) as {
+            analysis: AnalysisReport;
+            createdAt: string;
+          }[];
+          const matchingSearch = searches.find(
+            (search) =>
+              search.analysis.operatorName.trim().toLowerCase() === query.trim().toLowerCase()
           );
+          setSearchCreatedAt(matchingSearch?.createdAt ?? null);
+          const reports = searches.map((search) => search.analysis);
           setSavedAnalyses(reports);
           const current = reports.find(
             (report: AnalysisReport) =>
@@ -1725,6 +1718,7 @@ function ResultsContent() {
           paidSearchesLeft={paidSearchesLeft}
           previousSearches={savedAnalyses.map((report) => report.operatorName)}
           onSelectSearch={(q) => router.push(`/analyze/results?q=${encodeURIComponent(q)}`)}
+          onSeeBilling={() => router.push('/billing')}
           onSignOut={async () => {
             if (auth) await signOut(auth);
             router.push('/signin');
