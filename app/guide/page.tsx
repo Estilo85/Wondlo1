@@ -494,7 +494,7 @@ export default function GuidePage() {
                     className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6"
                     style={{
                       background:'radial-gradient(circle at top right, #C7B5F5 0%, #EDE7FB 75%)'}}>
-                    <strong>Profile menu</strong> — avatar with a green dot (top-right on Dashboard, reports, and Upgrade pages). Opens <strong>Sign Out</strong>.
+                    <strong>Profile menu</strong> — avatar with a green dot (top-right on Dashboard, reports, Upgrade, and Billing pages). Opens <strong>Settings</strong> and <strong>Sign Out</strong>.
                   </div>
                   <div
                     className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6"
