@@ -271,7 +271,11 @@ export default function HeroSection({
 
   return (
     <>
-      <section className="relative overflow-visible bg-white pb-0 sm:pb-8 lg:pb-0">
+      <section
+        className={`relative overflow-visible ${
+          dashboardLayout ? 'bg-[#FAF9FE]' : 'bg-white'
+        } pb-0 sm:pb-8 lg:pb-0`}
+      >
         <div className="mx-auto w-full max-w-[1440px]">
 
           {/* =====================================================

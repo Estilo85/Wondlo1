@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/lib/firebase-client';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -11,6 +10,7 @@ import FreeSidebar from '@/components/FreeSidebar';
 import PaidSidebar from '@/components/PaidSidebar';
 import SidebarToggleButton from '@/components/SidebarToggleButton';
 import { isPaidPlan } from '@/lib/billing';
+import ResultsNavbar from '@/components/ResultsNavbar';
 import type { AnalysisReport, DimensionScores } from '@/lib/mock-analysis';
 
 const sectionStyle = {
@@ -24,7 +24,6 @@ function ResultsContent() {
   const router = useRouter();
 
   const [authReady, setAuthReady] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userName, setUserName] = useState('TRAVELLER');
   const [isPaid, setIsPaid] = useState(false);
@@ -39,13 +38,6 @@ function ResultsContent() {
     description: string;
   } | null>(null);
 
-  const handleSignOut = async () => {
-    if (auth) {
-      await signOut(auth);
-    }
-
-    router.replace('/');
-  };
 
   const downloadSafetyQuestions = () => {
     const downloadDate = new Date().toLocaleDateString('en-US', {
@@ -447,137 +439,40 @@ function ResultsContent() {
           NAVIGATION
       ================================================================= */}
 
-      <header className="sticky top-0 z-40 bg-white border-b border-[#EDE7FB]">
-        <div className="w-full max-w-[1316px] mx-auto px-4 sm:px-6 xl:px-0">
-          <div className="min-h-16 py-3 flex items-center justify-between gap-3">
-            <Link
-              href="/"
-              className="font-bold text-lg text-[#2B2740] tracking-tight flex-shrink-0"
-            >
-              Wondlo
-            </Link>
+      <ResultsNavbar
+        onAnalyseAnother={() => {
+          if (searchesLeft === 0) {
+            setSearchLimitMessage(
+              isPaid
+                ? 'You have reached your 7 monthly searches.'
+                : 'You have reached your 3 free searches. Upgrade to analyse another adventure.'
+            );
+            return;
+          }
 
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-              <nav className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-wide text-[#2B2740]">
-                <Link
-                  href="/"
-                  className="hover:text-[#7E6BB3] transition-colors"
-                >
-                  HOME
-                </Link>
+          router.push('/dashboard?newSearch=1');
+        }}
+      />
 
-                <Link
-                  href="/community"
-                  className="hover:text-[#7E6BB3] transition-colors"
-                >
-                  COMMUNITY
-                </Link>
-              </nav>
+      <div className="w-full bg-[#F6F4FE] border-t border-[#EDE7FB]">
+        <div className="w-full max-w-[1316px] mx-auto px-4 sm:px-6 xl:px-0 min-h-10 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <button
+            onClick={() => router.back()}
+            className="text-xs font-semibold text-[#7E6BB3] hover:underline flex items-center gap-2 cursor-pointer"
+          >
+            <span className="text-[#3D8A1E] text-base font-extrabold leading-none">
+              ←
+            </span>
+            Back to Search
+          </button>
 
-              <button
-                onClick={() => {
-                  if (searchesLeft === 0) {
-                    setSearchLimitMessage(
-                      isPaid
-                        ? 'You have reached your 7 monthly searches.'
-                        : 'You have reached your 3 free searches. Upgrade to analyse another adventure.'
-                    );
-                    return;
-                  }
-
-                  router.push('/dashboard?newSearch=1');
-                }}
-                className="h-8 px-3 sm:px-4 rounded-lg bg-[#7E6BB3] text-white border border-[#7E6BB3] flex items-center gap-2 text-xs font-semibold transition-opacity hover:opacity-90 cursor-pointer whitespace-nowrap"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-
-                <span className="hidden sm:inline">Analyse Another Adventure</span>
-                <span className="sm:hidden">Analyse Another</span>
-                <span className="text-sm">→</span>
-              </button>
-
-              <div className="relative flex-shrink-0">
-                <button
-                  type="button"
-                  aria-label="Open profile menu"
-                  aria-expanded={profileOpen}
-                  onClick={() => setProfileOpen((open) => !open)}
-                  className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#C7B5F5] bg-[#F6F4FE] text-[#7E6BB3]"
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z"
-                    />
-                  </svg>
-
-                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#3D8A1E] ring-2 ring-white" />
-                </button>
-
-                {profileOpen && (
-                  <div className="absolute right-0 top-11 z-50 w-32 rounded-lg border border-[#EDE7FB] bg-white p-1 shadow-lg">
-                    <Link
-                      href="/settings"
-                      onClick={() => setProfileOpen(false)}
-                      className="block w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
-                    >
-                      Settings
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      className="w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-[#2B2740]">
+            <span>Assessment Version: v1.1</span>
+            <span className="hidden sm:inline text-[#9AA0A6]">|</span>
+            <span>Generated: {generatedDate}</span>
           </div>
         </div>
-
-        <div className="w-full bg-[#F6F4FE] border-t border-[#EDE7FB]">
-          <div className="w-full max-w-[1316px] mx-auto px-4 sm:px-6 xl:px-0 min-h-10 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <button
-              onClick={() => router.back()}
-              className="text-xs font-semibold text-[#7E6BB3] hover:underline flex items-center gap-2 cursor-pointer"
-            >
-              <span className="text-[#3D8A1E] text-base font-extrabold leading-none">
-                ←
-              </span>
-
-              Back to Search
-            </button>
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-[#2B2740]">
-              <span>Assessment Version: v1.1</span>
-              <span className="hidden sm:inline text-[#9AA0A6]">|</span>
-              <span>Generated: {generatedDate}</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      </div>
 
       {searchLimitMessage && (
         <div

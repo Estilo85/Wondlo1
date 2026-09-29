@@ -80,7 +80,7 @@ export default function PaymentPageSection({
 
   return (
     <div className="min-h-screen bg-[#FAF9FE] text-[#2B2740] font-poppins antialiased">
-      <header className="sticky top-0 z-50 border-b border-[#EDE7FB] bg-white">
+      <header className="sticky top-0 z-50 border-b border-[#EDE7FB] bg-[#FAF9FE]">
         <div className="mx-auto flex min-h-16 w-full max-w-[1316px] items-center justify-between gap-3 px-4 py-3 sm:px-6 xl:px-0">
           <Link
             href="/"
