@@ -15,6 +15,12 @@ export default function SignupPage() {
   const [successMessage, setSuccessMessage] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const getSigninHref = () => {
+    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    return redirect?.startsWith('/') && !redirect.startsWith('//')
+      ? `/signin?redirect=${encodeURIComponent(redirect)}`
+      : '/signin';
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +46,7 @@ export default function SignupPage() {
 
       // Redirect to sign in after showing the success confirmation briefly
       setTimeout(() => {
-        router.push('/signin');
+        router.push(getSigninHref());
       }, 3500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -111,6 +117,18 @@ export default function SignupPage() {
               Already have an account?{' '}
               <Link
                 href="/signin"
+                onClick={(event) => {
+                  const redirect = new URLSearchParams(
+                    window.location.search
+                  ).get('redirect');
+                  if (
+                    redirect?.startsWith('/') &&
+                    !redirect.startsWith('//')
+                  ) {
+                    event.preventDefault();
+                    router.push(getSigninHref());
+                  }
+                }}
                 className="text-[#8B6BCB] hover:underline"
               >
                 Sign In

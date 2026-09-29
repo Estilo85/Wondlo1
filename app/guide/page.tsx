@@ -460,6 +460,7 @@ export default function GuidePage() {
                         <tr><td className="px-4 py-3 align-top">Homepage</td><td className="px-4 py-3">Logo / HOME link</td></tr>
                         <tr><td className="px-4 py-3 align-top">Sign Up</td><td className="px-4 py-3"><Link href="/signup" className="text-[#7E6BB3] hover:underline">Sign Up</Link> button</td></tr>
                         <tr><td className="px-4 py-3 align-top">Sign In</td><td className="px-4 py-3"><Link href="/signin" className="text-[#7E6BB3] hover:underline">Sign In</Link> button</td></tr>
+                        <tr><td className="px-4 py-3 align-top">Community</td><td className="px-4 py-3">Navbar, after Sign In</td></tr>
                         <tr><td className="px-4 py-3 align-top">Set Password</td><td className="px-4 py-3">Link inside the welcome email</td></tr>
                         <tr><td className="px-4 py-3 align-top">Dashboard</td><td className="px-4 py-3">After signing in</td></tr>
                         <tr><td className="px-4 py-3 align-top">Safety Report</td><td className="px-4 py-3">Automatically after a search</td></tr>
@@ -482,7 +483,7 @@ export default function GuidePage() {
                     className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6"
                     style={{
                       background:'radial-gradient(circle at bottom right, #C7B5F5 0%, #EDE7FB 75%)'}}>
-                    <strong>Top navigation bar</strong> — Wondlo logo (home), HOME, Sign In, Sign Up, and (when relevant) Analyse Another.
+                    <strong>Top navigation bar</strong> — Wondlo logo (home), HOME, Sign In, Community, Sign Up, and (when relevant) Analyse Another.
                   </div>
                   <div
                     className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6"
@@ -770,7 +771,7 @@ export default function GuidePage() {
                   <div
                     className="rounded-xl p-4 text-sm leading-6"
                     style={{ background: 'linear-gradient(135deg, #EDE7FB 0%, #C7B5F5 100%)' }}>
-                    <strong>Join the Telegram community</strong> via the footer (&ldquo;Join us on&rdquo;). A confirmation page forwards you to the group after about 2 seconds.
+                    <strong>Visit the Community page</strong> from the top navigation bar, after Sign In. To join the Telegram community, use the footer (&ldquo;Join us on&rdquo;); a confirmation page forwards you to the group after about 2 seconds.
                   </div>
                   <div
                     className="rounded-xl p-4 text-sm leading-6"

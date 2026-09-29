@@ -23,6 +23,9 @@ model User {
   searches           Search[]
   savedCards         SavedCard[]
   purchases          Purchase[]
+  communityPosts     CommunityPost[]
+  communityLikes     CommunityLike[]
+  communityComments  CommunityComment[]
 }
 
 model SavedCard {
@@ -68,4 +71,48 @@ model Search {
 
   @@unique([userId, queryKey])
   @@index([userId, createdAt])
+}
+
+model CommunityPost {
+  id        String             @id @default(uuid())
+  userId    String
+  category  String
+  country   String
+  activity  String
+  title     String
+  body      String             @db.Text
+  image     String?            @db.Text
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     CommunityLike[]
+  comments  CommunityComment[]
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model CommunityLike {
+  id        String        @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+model CommunityComment {
+  id        String        @id @default(uuid())
+  postId    String
+  userId    String
+  text      String        @db.Text
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId])
 }

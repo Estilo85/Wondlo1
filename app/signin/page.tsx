@@ -22,7 +22,6 @@ export default function SignInPage() {
     const [error, setError] = useState('');
     const [resetLoading, setResetLoading] = useState(false);
     const [resetMessage, setResetMessage] = useState('');
-
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -159,6 +158,20 @@ export default function SignInPage() {
                             Sign in to continue to your account.{' '}
                             <Link
                                 href="/signup"
+                                onClick={(event) => {
+                                    const redirect = new URLSearchParams(
+                                        window.location.search
+                                    ).get('redirect');
+                                    if (
+                                        redirect?.startsWith('/') &&
+                                        !redirect.startsWith('//')
+                                    ) {
+                                        event.preventDefault();
+                                        router.push(
+                                            `/signup?redirect=${encodeURIComponent(redirect)}`
+                                        );
+                                    }
+                                }}
                                 className="font-medium text-[#8B6BCB] hover:underline"
                             >
                                 Don&apos;t have an account? Sign Up
