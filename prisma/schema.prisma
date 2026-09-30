@@ -13,6 +13,7 @@ model User {
   firebaseId         String?   @unique
   name               String
   email              String    @unique
+  avatarUrl          String?   @db.Text
   freeSearchesUsed   Int       @default(0)
   plan               String    @default("free_trial")
   searchAllowance    Int       @default(3)
@@ -82,6 +83,7 @@ model CommunityPost {
   title     String
   body      String             @db.Text
   image     String?            @db.Text
+  shareCount Int               @default(0)
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)

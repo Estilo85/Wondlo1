@@ -10,6 +10,13 @@ export const runtime = 'nodejs';
 const POST_CATEGORIES = ['Trip Experience', 'Safety Warning'] as const;
 const MAX_IMAGE_LENGTH = 2_200_000;
 
+/*
+ * A client can fire the same submission more than once (double click, retry,
+ * flaky connection). Treating an identical post from the same author within a
+ * short window as a duplicate keeps one intent to one post.
+ */
+const DUPLICATE_WINDOW_MS = 60_000;
+
 function validatePost(body: Record<string, unknown>) {
   const category = POST_CATEGORIES.find((option) => option === body.category);
   const country = typeof body.country === 'string' ? body.country.trim() : '';
@@ -56,11 +63,11 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
       take: 100,
       include: {
-        user: { select: { name: true } },
+        user: { select: { name: true, avatarUrl: true } },
         likes: viewerId ? { where: { userId: viewerId }, select: { id: true } } : false,
         comments: {
           orderBy: { createdAt: 'asc' },
-          include: { user: { select: { name: true } } },
+          include: { user: { select: { name: true, avatarUrl: true } } },
         },
         _count: { select: { likes: true, comments: true } },
       },
@@ -70,6 +77,7 @@ export async function GET(request: Request) {
       posts: posts.map((post) => ({
         id: post.id,
         author: post.user.name,
+        authorAvatarUrl: post.user.avatarUrl,
         country: post.country,
         activity: post.activity,
         category: post.category,
@@ -78,6 +86,7 @@ export async function GET(request: Request) {
         body: post.body,
         likes: post._count.likes,
         comments: post._count.comments,
+        shares: post.shareCount,
         likedByMe: viewerId ? post.likes.length > 0 : false,
         ownedByMe: viewerId === post.userId,
         image: post.image,
@@ -85,6 +94,7 @@ export async function GET(request: Request) {
           id: comment.id,
           text: comment.text,
           author: comment.user.name,
+          authorAvatarUrl: comment.user.avatarUrl,
         })),
       })),
     });
@@ -108,8 +118,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
+    const { data } = validation;
+
+    const recentDuplicate = await prisma.communityPost.findFirst({
+      where: {
+        userId: authentication.user.id,
+        title: data.title,
+        body: data.body,
+        country: data.country,
+        activity: data.activity,
+        createdAt: { gte: new Date(Date.now() - DUPLICATE_WINDOW_MS) },
+      },
+      select: { id: true },
+    });
+
+    if (recentDuplicate) {
+      return NextResponse.json({ id: recentDuplicate.id }, { status: 200 });
+    }
+
     const post = await prisma.communityPost.create({
-      data: { ...validation.data, userId: authentication.user.id },
+      data: { ...data, userId: authentication.user.id },
     });
 
     return NextResponse.json({ id: post.id }, { status: 201 });

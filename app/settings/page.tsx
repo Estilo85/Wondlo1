@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   onAuthStateChanged,
@@ -14,6 +15,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { auth } from '@/lib/firebase-client';
 import { isPaidPlan } from '@/lib/billing';
+import { resizeAvatar } from '@/lib/image';
+import { FiUsers } from 'react-icons/fi';
 
 type PlanSummary = {
   key: string;
@@ -55,6 +58,12 @@ export default function SettingsPage() {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordMessage, setPasswordMessage] = useState('');
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const [avatarMessage, setAvatarMessage] = useState('');
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!auth) {
@@ -98,6 +107,7 @@ export default function SettingsPage() {
           left: data.left ?? 0,
           cycleEndsAt: data.cycleEndsAt ?? null,
         });
+        setAvatarUrl(data.avatarUrl ?? null);
       } catch (error) {
         console.error('Failed to load plan details:', error);
         setPlanError('We could not load your plan details right now.');
@@ -194,6 +204,95 @@ export default function SettingsPage() {
       setDetailsError('We could not save your changes. Please try again.');
     } finally {
       setDetailsBusy(false);
+    }
+  };
+
+  const handleAvatarSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    setAvatarError('');
+    setAvatarMessage('');
+
+    const resized = await resizeAvatar(file);
+
+    if (!resized.ok) {
+      setAvatarError(resized.error);
+      return;
+    }
+
+    setAvatarBusy(true);
+
+    try {
+      const token = await auth?.currentUser?.getIdToken();
+
+      if (!token) {
+        setAvatarError('We could not verify your account. Please sign in again.');
+        return;
+      }
+
+      const response = await fetch('/api/user/avatar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ avatarUrl: resized.dataUrl }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setAvatarError(data?.error || 'We could not save your profile picture.');
+        return;
+      }
+
+      setAvatarUrl(data.avatarUrl ?? null);
+      setAvatarMessage('Your profile picture has been updated.');
+    } catch (error) {
+      console.error('Failed to save profile picture:', error);
+      setAvatarError('We could not save your profile picture. Please try again.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarError('');
+    setAvatarMessage('');
+    setAvatarBusy(true);
+
+    try {
+      const token = await auth?.currentUser?.getIdToken();
+
+      if (!token) {
+        setAvatarError('We could not verify your account. Please sign in again.');
+        return;
+      }
+
+      const response = await fetch('/api/user/avatar', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setAvatarError(data?.error || 'We could not remove your profile picture.');
+        return;
+      }
+
+      setAvatarUrl(null);
+      setAvatarMessage('Your profile picture has been removed.');
+    } catch (error) {
+      console.error('Failed to remove profile picture:', error);
+      setAvatarError('We could not remove your profile picture. Please try again.');
+    } finally {
+      setAvatarBusy(false);
     }
   };
 
@@ -300,6 +399,88 @@ export default function SettingsPage() {
         </p>
 
         <div className="mt-8 space-y-6">
+          {/* PROFILE PICTURE */}
+          <section className="rounded-2xl p-6 sm:p-8" style={cardStyle}>
+            <h2 className="font-poppins text-lg font-semibold text-[#2B2740]">
+              Profile Picture
+            </h2>
+
+            <p className="mt-1 font-inter text-xs text-[#6B7280]">
+              This picture appears next to your name on the community feed. We resize it
+              for you.
+            </p>
+
+            {avatarError && (
+              <div className="mt-5 rounded-[15px] bg-red-50 p-3 font-inter text-sm text-red-600">
+                {avatarError}
+              </div>
+            )}
+
+            {avatarMessage && (
+              <div className="mt-5 rounded-[15px] bg-green-50 p-3 font-inter text-sm text-green-600">
+                {avatarMessage}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+              <div className="relative flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#C7B5F5]/75 ring-2 ring-[#C7B5F5]">
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt="Your profile picture"
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <FiUsers
+                    className="h-10 w-10 text-[#7E6BB3]"
+                    strokeWidth={1.4}
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={avatarBusy}
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="h-11 cursor-pointer rounded-[20px] bg-[#8B6BCB] px-5 font-inter text-sm font-semibold text-white transition-all hover:bg-[#7A5BB8] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {avatarUrl ? 'Change Picture' : 'Upload Picture'}
+                  </button>
+
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      disabled={avatarBusy}
+                      onClick={handleRemoveAvatar}
+                      className="h-11 cursor-pointer rounded-[20px] border-2 border-[#C7B5F5] px-5 font-inter text-sm font-semibold text-[#2B2740] transition-all hover:bg-[#EDE7FB] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <p className="font-inter text-xs text-[#6B7280]">
+                  PNG, JPEG or WebP. We resize it down to 256px.
+                </p>
+              </div>
+
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleAvatarSelected}
+                className="hidden"
+                aria-label="Choose a profile picture"
+              />
+            </div>
+          </section>
+
           {/* ACCOUNT DETAILS */}
           <section className="rounded-2xl p-6 sm:p-8" style={cardStyle}>
             <h2 className="font-poppins text-lg font-semibold text-[#2B2740]">

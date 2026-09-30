@@ -32,6 +32,7 @@ import {
 import ResultsNavbar from '@/components/ResultsNavbar';
 import Footer from '@/components/Footer';
 import { auth } from '@/lib/firebase-client';
+import { resizePostImage } from '@/lib/image';
 
 type PostCategory = 'Trip Experience' | 'Safety Warning';
 type OpenDropdown = 'activity' | 'location' | null;
@@ -74,6 +75,7 @@ type LocalComment = {
   id: string;
   text: string;
   author?: string;
+  authorAvatarUrl?: string | null;
 };
 
 type DraftImage = {
@@ -99,7 +101,7 @@ function formatPostTimestamp(timestamp: string) {
 async function sendCommunityRequest(
   path: string,
   method: 'POST' | 'PATCH' | 'DELETE',
-  payload: Record<string, unknown>
+  payload?: Record<string, unknown>
 ) {
   const token = await auth?.currentUser?.getIdToken();
   const response = await fetch(path, {
@@ -108,7 +110,7 @@ async function sendCommunityRequest(
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload ?? {}),
   });
   const result = await response.json();
 
@@ -630,6 +632,7 @@ export default function CommunityPage() {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
   const [draftImage, setDraftImage] = useState<DraftImage | null>(null);
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
   const [sharedPostId, setSharedPostId] = useState<string | null>(null);
 
@@ -667,6 +670,7 @@ export default function CommunityPage() {
       posts: Array<{
         id: string;
         author: string;
+        authorAvatarUrl: string | null;
         country: string;
         activity: string;
         category: PostCategory;
@@ -675,6 +679,7 @@ export default function CommunityPage() {
         body: string;
         likes: number;
         comments: number;
+        shares: number;
         likedByMe: boolean;
         ownedByMe: boolean;
         image: string | null;
@@ -685,7 +690,7 @@ export default function CommunityPage() {
     const posts = data.posts.map((post) => ({
       id: post.id,
       author: post.author,
-      avatar: '',
+      avatar: post.authorAvatarUrl ?? '',
       location: `${post.country} · ${post.activity}`,
       country: post.country,
       activity: post.activity,
@@ -709,7 +714,7 @@ export default function CommunityPage() {
             liked: post.likedByMe,
             likes: post.likes,
             comments: post.comments,
-            shares: current[post.id]?.shares ?? 0,
+            shares: post.shares,
           },
         ])
       ),
@@ -737,7 +742,28 @@ export default function CommunityPage() {
     };
 
     void refresh();
-    const intervalId = window.setInterval(() => void refresh(), 15_000);
+
+    /*
+     * The feed carries post images, so it is a heavy payload. Polling often
+     * enough to exhaust the database connection pool costs more than it buys,
+     * and a hidden tab does not need fresh data at all.
+     */
+    const POLL_INTERVAL_MS = 60_000;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
+    }, POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const unsubscribe = auth
       ? onAuthStateChanged(auth, () => void refresh())
       : undefined;
@@ -745,6 +771,7 @@ export default function CommunityPage() {
     return () => {
       isActive = false;
       window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       unsubscribe?.();
     };
   }, [loadCommunityPosts]);
@@ -971,41 +998,35 @@ export default function CommunityPage() {
     resetPostComposer();
   };
 
-  const handlePostImageChange = (
+  const handlePostImageChange = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
 
     if (!file) {
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
+    const result = await resizePostImage(file);
+
+    if (!result.ok) {
+      setCommunityError(result.error);
       return;
     }
 
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        return;
-      }
-
-      setDraftImage({
-        src: reader.result,
-        name: file.name,
-      });
-    };
-
-    reader.readAsDataURL(file);
-
-    event.target.value = '';
+    setCommunityError('');
+    setDraftImage({ src: result.dataUrl, name: result.name });
   };
 
   const submitAdventurePost = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
+
+    if (isSubmittingPost) {
+      return;
+    }
 
     const title = draftTitle.trim();
     const body = draftBody.trim();
@@ -1038,6 +1059,8 @@ export default function CommunityPage() {
       return;
     }
 
+    setIsSubmittingPost(true);
+
     try {
       const payload = {
         category: draftCategory,
@@ -1057,14 +1080,16 @@ export default function CommunityPage() {
         await sendCommunityRequest('/api/community', 'POST', payload);
       }
 
-      await loadCommunityPosts();
-      setCommunityError('');
       resetPostComposer();
       setIsPostComposerOpen(false);
+      setCommunityError('');
+      await loadCommunityPosts();
     } catch (error) {
       setCommunityError(
         error instanceof Error ? error.message : 'Unable to save your post.'
       );
+    } finally {
+      setIsSubmittingPost(false);
     }
   };
 
@@ -1128,7 +1153,7 @@ export default function CommunityPage() {
     }
   };
 
-  const incrementShareCount = (postId: string) => {
+  const incrementShareCount = async (postId: string) => {
     setPostInteractions((current) => {
       const interaction = current[postId];
 
@@ -1144,6 +1169,32 @@ export default function CommunityPage() {
         },
       };
     });
+
+    try {
+      const response = await sendCommunityRequest(
+        `/api/community/${encodeURIComponent(postId)}/share`,
+        'POST'
+      );
+
+      const data = (await response.json()) as { shares?: number };
+
+      if (typeof data.shares === 'number') {
+        setPostInteractions((current) => {
+          const interaction = current[postId];
+
+          if (!interaction) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [postId]: { ...interaction, shares: data.shares! },
+          };
+        });
+      }
+    } catch {
+      // The optimistic count stays visible; the next feed load reconciles it.
+    }
   };
 
   const getPostShareUrl = (postId: string) => {
@@ -1278,7 +1329,8 @@ export default function CommunityPage() {
     Boolean(draftTitle.trim()) &&
     Boolean(draftBody.trim()) &&
     Boolean(draftCountry) &&
-    Boolean(draftActivity);
+    Boolean(draftActivity) &&
+    !isSubmittingPost;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FAF9FE] text-[#2B2740]">
@@ -1549,6 +1601,7 @@ export default function CommunityPage() {
                           fill
                           sizes="80px"
                           className="object-cover"
+                          unoptimized
                         />
                       ) : (
                         <FiUsers
@@ -1769,15 +1822,36 @@ export default function CommunityPage() {
                           {comments.map((comment) => (
                             <div
                               key={comment.id}
-                              className="rounded-[8px] bg-[#EDE7FB] px-4 py-3"
+                              className="flex items-start gap-3 rounded-[8px] bg-[#EDE7FB] px-4 py-3"
                             >
-                              <p className="font-inter text-[13px] font-semibold text-[#2B2740] sm:text-[14px]">
-                                {comment.author || 'You'}
-                              </p>
+                              <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#C7B5F5]/75">
+                                {comment.authorAvatarUrl ? (
+                                  <Image
+                                    src={comment.authorAvatarUrl}
+                                    alt=""
+                                    fill
+                                    sizes="36px"
+                                    className="object-cover"
+                                    unoptimized
+                                  />
+                                ) : (
+                                  <FiUsers
+                                    className="h-5 w-5 text-[#7E6BB3]"
+                                    strokeWidth={1.6}
+                                    aria-hidden="true"
+                                  />
+                                )}
+                              </span>
 
-                              <p className="mt-1 font-inter text-[14px] leading-relaxed text-[#2B2740] sm:text-[16px]">
-                                {comment.text}
-                              </p>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-inter text-[13px] font-semibold text-[#2B2740] sm:text-[14px]">
+                                  {comment.author || 'You'}
+                                </p>
+
+                                <p className="mt-1 font-inter text-[14px] leading-relaxed text-[#2B2740] sm:text-[16px]">
+                                  {comment.text}
+                                </p>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -2142,9 +2216,11 @@ export default function CommunityPage() {
                   disabled={!canSubmitPost}
                   className="h-[48px] rounded-[8px] bg-[linear-gradient(90deg,_#7E6BB3_25%,_#2B2740_100%)] px-7 font-inter text-[15px] font-semibold text-white shadow-[0_3px_5px_rgba(0,0,0,0.2)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {editingPostId
-                    ? 'Update Post'
-                    : 'Post to Community'}
+                  {isSubmittingPost
+                    ? 'Posting...'
+                    : editingPostId
+                      ? 'Update Post'
+                      : 'Post to Community'}
                 </button>
               </div>
             </form>

@@ -1,70 +1,23 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { adminAuth } from '@/lib/firebase-admin';
+import {
+  authenticateRequestUser,
+  getOptionalUserId,
+  unauthorized,
+} from '@/lib/api-auth';
 
 export async function authenticateCommunityUser(request: Request) {
-  const authorization = request.headers.get('authorization');
-  const token = authorization?.startsWith('Bearer ')
-    ? authorization.slice('Bearer '.length)
-    : '';
+  const result = await authenticateRequestUser(request);
 
-  if (!token) {
-    return {
-      user: null,
-      response: NextResponse.json(
-        { error: 'Sign in to post or interact with the community.' },
-        { status: 401 }
-      ),
-    };
+  if (!result.user) {
+    return { user: null, response: result.response };
   }
 
-  try {
-    const decoded = await adminAuth.verifyIdToken(token);
-    const user = await prisma.user.findUnique({
-      where: { firebaseId: decoded.uid },
-      select: { id: true, name: true },
-    });
-
-    if (!user) {
-      return {
-        user: null,
-        response: NextResponse.json(
-          { error: 'Your account is not available.' },
-          { status: 401 }
-        ),
-      };
-    }
-
-    return { user, response: null };
-  } catch {
-    return {
-      user: null,
-      response: NextResponse.json(
-        { error: 'Your session is invalid. Please sign in again.' },
-        { status: 401 }
-      ),
-    };
-  }
+  return {
+    user: { id: result.user.id, name: result.user.name },
+    response: null,
+  };
 }
 
-export async function getOptionalCommunityUserId(request: Request) {
-  const authorization = request.headers.get('authorization');
-  const token = authorization?.startsWith('Bearer ')
-    ? authorization.slice('Bearer '.length)
-    : '';
+export { getOptionalUserId as getOptionalCommunityUserId };
 
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const decoded = await adminAuth.verifyIdToken(token);
-    const user = await prisma.user.findUnique({
-      where: { firebaseId: decoded.uid },
-      select: { id: true },
-    });
-    return user?.id ?? null;
-  } catch {
-    return null;
-  }
-}
+export { unauthorized };

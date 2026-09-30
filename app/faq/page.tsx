@@ -52,8 +52,7 @@ const FAQ_GROUPS: { title: string; items: { q: string; a: React.ReactNode }[] }[
         q: 'Can I get a refund for a Pay As You Go purchase?',
         a: (
           <>
-            If you have not used any of the searches from a Pay As You Go top-up and you contact
-            us within 7 days of purchase, we will refund the full amount to the card used.
+            ...........
           </>
         ),
       },

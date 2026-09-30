@@ -23,6 +23,27 @@ export function isPaidPlan(plan: string): boolean {
   return plan === 'pay_as_you_go' || plan === 'starter';
 }
 
+/*
+ * Internal testing accounts that should never be blocked by a search limit.
+ * The list comes from DEV_UNLIMITED_EMAILS and is only ever populated in a
+ * developer's local .env file, which is gitignored. In production the variable
+ * is absent, this resolves to an empty set, and no account is exempt.
+ */
+const UNLIMITED_SEARCH_EMAILS = new Set(
+  (process.env.DEV_UNLIMITED_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+export function hasUnlimitedSearches(email: string | null | undefined): boolean {
+  if (!email || UNLIMITED_SEARCH_EMAILS.size === 0) {
+    return false;
+  }
+
+  return UNLIMITED_SEARCH_EMAILS.has(email.toLowerCase());
+}
+
 export type BillingUser = {
   plan: string;
   searchAllowance: number;

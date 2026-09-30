@@ -2,18 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { adminAuth } from '@/lib/firebase-admin';
 import { generateMockAnalysis } from '@/lib/mock-analysis';
-import { FREE_TRIAL_SEARCHES, isPaidPlan, planInfo, type BillingUser } from '@/lib/billing';
+import { FREE_TRIAL_SEARCHES, hasUnlimitedSearches, isPaidPlan, planInfo, type BillingUser } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const STARTER_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 
-async function getUser(token: string): Promise<(BillingUser & { id: string; name: string }) | null> {
+async function getUser(token: string): Promise<(BillingUser & { id: string; name: string; email: string }) | null> {
   const decoded = await adminAuth.verifyIdToken(token);
   const user = await prisma.user.findUnique({
     where: { firebaseId: decoded.uid },
-  }) as (BillingUser & { id: string; name: string }) | null;
+  }) as (BillingUser & { id: string; name: string; email: string }) | null;
 
   if (!user || user.plan !== 'starter') return user;
 
@@ -27,7 +27,7 @@ async function getUser(token: string): Promise<(BillingUser & { id: string; name
           searchAllowanceUsed: 0,
           cycleEndsAt: new Date(now.getTime() + STARTER_PERIOD_MS),
         },
-      }) as Promise<BillingUser & { id: string; name: string }>;
+      }) as Promise<BillingUser & { id: string; name: string; email: string }>;
     });
   }
 
@@ -35,21 +35,44 @@ async function getUser(token: string): Promise<(BillingUser & { id: string; name
     return prisma.user.update({
       where: { id: user.id },
       data: { cycleEndsAt: new Date(now.getTime() + STARTER_PERIOD_MS) },
-    }) as Promise<BillingUser & { id: string; name: string }>;
+    }) as Promise<BillingUser & { id: string; name: string; email: string }>;
   }
 
   return user;
 }
 
-function usageForUser(user: BillingUser) {
+function usageForUser(user: BillingUser & { email?: string }) {
+  if (hasUnlimitedSearches(user.email)) {
+    return { paid: false, allowance: 0, used: 0, left: 0, limited: false, unlimited: true };
+  }
+
   const paid = isPaidPlan(user.plan);
   const { allowance, used, left, limited } = planInfo(user);
-  return { paid, allowance, used, left, limited };
+  return { paid, allowance, used, left, limited, unlimited: false };
 }
 
-function responseForUser(user: BillingUser & { name: string }) {
-  const paid = isPaidPlan(user.plan);
-  const { allowance, used, left, limited } = planInfo(user);
+function responseForUser(user: BillingUser & { name: string; email: string }) {
+  const usage = usageForUser(user);
+
+  if (usage.unlimited) {
+    return {
+      name: user.name,
+      plan: user.plan,
+      isPaid: false,
+      searchAllowance: null,
+      searchAllowanceUsed: null,
+      searchesLeft: null,
+      paidSearchesLeft: 0,
+      renewalAt: user.cycleEndsAt ?? null,
+      freeSearchesUsed: null,
+      freeSearchesLeft: null,
+      limited: false,
+      unlimited: true,
+    };
+  }
+
+  const paid = usage.paid;
+  const { allowance, used, left, limited } = usage;
   return {
     name: user.name,
     plan: user.plan,
@@ -62,6 +85,7 @@ function responseForUser(user: BillingUser & { name: string }) {
     freeSearchesUsed: used,
     freeSearchesLeft: left,
     limited,
+    unlimited: false,
   };
 }
 
@@ -133,7 +157,7 @@ export async function POST(req: Request) {
         const updatedUser = await transaction.user.update({
           where: { id: user.id },
           data: { searchAllowanceUsed: { increment: 1 } },
-          select: { name: true, plan: true, searchAllowance: true, searchAllowanceUsed: true, freeSearchesUsed: true, cycleEndsAt: true },
+          select: { name: true, email: true, plan: true, searchAllowance: true, searchAllowanceUsed: true, freeSearchesUsed: true, cycleEndsAt: true },
         });
         const search = await transaction.search.create({
           data: {
@@ -162,7 +186,7 @@ export async function POST(req: Request) {
       });
       const freshProfile = await transaction.user.findUniqueOrThrow({
         where: { id: user.id },
-        select: { name: true, plan: true, searchAllowance: true, searchAllowanceUsed: true, freeSearchesUsed: true, cycleEndsAt: true },
+        select: { name: true, email: true, plan: true, searchAllowance: true, searchAllowanceUsed: true, freeSearchesUsed: true, cycleEndsAt: true },
       });
       return { search, updatedProfile: freshProfile };
     });

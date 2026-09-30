@@ -36,6 +36,7 @@ export async function POST(
         userId: authentication.user.id,
         text,
       },
+      include: { user: { select: { name: true, avatarUrl: true } } },
     });
     const comments = await prisma.communityComment.count({ where: { postId } });
 
@@ -44,7 +45,8 @@ export async function POST(
         comment: {
           id: comment.id,
           text: comment.text,
-          author: authentication.user.name,
+          author: comment.user.name,
+          authorAvatarUrl: comment.user.avatarUrl,
         },
         comments,
       },

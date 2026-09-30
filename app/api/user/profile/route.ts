@@ -56,6 +56,7 @@ export async function POST(req: Request) {
       if (user.freeSearchesUsed >= FREE_SEARCH_LIMIT) {
         return NextResponse.json({
           name: user.name,
+          avatarUrl: user.avatarUrl,
           freeSearchesUsed: user.freeSearchesUsed,
           freeSearchesLeft: 0,
           limited: true,
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         name: updated.name,
+        avatarUrl: updated.avatarUrl,
         freeSearchesUsed: updated.freeSearchesUsed,
         freeSearchesLeft: Math.max(0, FREE_SEARCH_LIMIT - updated.freeSearchesUsed),
         limited: updated.freeSearchesUsed >= FREE_SEARCH_LIMIT,
@@ -77,6 +79,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       name: user.name,
+      avatarUrl: user.avatarUrl,
       freeSearchesUsed: user.freeSearchesUsed,
       freeSearchesLeft: Math.max(0, FREE_SEARCH_LIMIT - user.freeSearchesUsed),
       limited: user.freeSearchesUsed >= FREE_SEARCH_LIMIT,
