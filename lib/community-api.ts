@@ -31,10 +31,13 @@ export async function authenticateCommunityAdmin(request: Request) {
   }
 
   if (!isCommunityAdmin(result.user.email)) {
-    return {
-      user: null,
-      response: unauthorized('You cannot review community reports.', 403),
-    };
+    /*
+     * unauthorized() is itself the failure result, matching the shape
+     * authenticateRequestUser returns. Wrapping it in another object would
+     * leave `response` holding a failure object instead of a NextResponse,
+     * which the generated route types reject at build time.
+     */
+    return unauthorized('You cannot review community reports.', 403);
   }
 
   return {
