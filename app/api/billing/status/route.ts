@@ -34,6 +34,7 @@ export async function GET(req: Request) {
     const info = planInfo(user);
 
     return NextResponse.json({
+      avatarUrl: user.avatarUrl,
       user: { name: user.name, email: user.email },
       ...info,
       cards: user.savedCards.map((card) => ({

@@ -60,7 +60,10 @@ export async function GET(request: Request) {
   try {
     const viewerId = await getOptionalCommunityUserId(request);
     const posts = await prisma.communityPost.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { likes: { _count: 'desc' } },
+        { createdAt: 'desc' },
+      ],
       take: 100,
       include: {
         user: { select: { name: true, avatarUrl: true } },

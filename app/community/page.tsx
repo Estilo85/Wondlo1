@@ -14,7 +14,6 @@ import {
   FiArrowUpCircle,
   FiLifeBuoy,
   FiMessageSquare,
-  FiHeart,
   FiMessageCircle,
   FiShare2,
   FiMoreHorizontal,
@@ -46,6 +45,7 @@ type CommunityPost = {
   activity: string;
   category: PostCategory;
   timestamp: string;
+  createdAt: number;
   title: string;
   body: string;
   likes: number;
@@ -696,6 +696,7 @@ export default function CommunityPage() {
       activity: post.activity,
       category: post.category,
       timestamp: formatPostTimestamp(post.timestamp),
+      createdAt: new Date(post.timestamp).getTime(),
       title: post.title,
       body: post.body,
       likes: post.likes,
@@ -897,6 +898,10 @@ export default function CommunityPage() {
         post.country.toLowerCase() === selectedLocation.toLowerCase();
 
       return matchesSearch && matchesActivity && matchesLocation;
+    }).sort((first, second) => {
+      const firstUpvotes = postInteractions[first.id]?.likes ?? first.likes;
+      const secondUpvotes = postInteractions[second.id]?.likes ?? second.likes;
+      return secondUpvotes - firstUpvotes || second.createdAt - first.createdAt;
     });
   }, [
     allPosts,
@@ -904,6 +909,7 @@ export default function CommunityPage() {
     selectedActivity,
     selectedLocation,
     sharedPostId,
+    postInteractions,
   ]);
 
   const hasActiveFilters =
@@ -1114,7 +1120,7 @@ export default function CommunityPage() {
       setCommunityError('');
     } catch (error) {
       setCommunityError(
-        error instanceof Error ? error.message : 'Unable to update this like.'
+        error instanceof Error ? error.message : 'Unable to update this upvote.'
       );
     }
   };
@@ -1492,7 +1498,7 @@ export default function CommunityPage() {
 
             {/* Sample Data Notice */}
             <p className="mt-8 text-center font-inter text-[14px] text-black/50">
-              Community posts, likes, and comments are shared with everyone.
+              Community posts, upvotes, and comments are shared with everyone.
             </p>
 
             {communityError && (
@@ -1729,31 +1735,26 @@ export default function CommunityPage() {
                   {/* Interaction Divider */}
                   <div className="mt-4 border-t border-black/50 pt-4 lg:mt-5">
                     <div className="grid grid-cols-3 items-center font-inter text-[16px] font-medium text-black/90 sm:text-[18px] lg:text-[24px]">
-                      {/* Like */}
+                      {/* Upvote */}
                       <button
                         type="button"
                         onClick={() => toggleLike(post.id)}
                         aria-pressed={interaction.liked}
-                        aria-label={`Like ${interaction.likes}`}
+                        aria-label={`Upvote ${interaction.likes}`}
                         className="flex items-center justify-start gap-2 focus:outline-none sm:gap-3"
                       >
-                        <FiHeart
+                        <FiArrowUpCircle
                           className={`h-[22px] w-[22px] flex-shrink-0 transition-colors sm:h-[24px] sm:w-[24px] lg:h-[30px] lg:w-[30px] ${
                             interaction.liked
                               ? 'text-[#7E6BB3]'
                               : 'text-black/75'
                           }`}
-                          fill={
-                            interaction.liked
-                              ? 'currentColor'
-                              : 'none'
-                          }
                           strokeWidth={1.4}
                           aria-hidden="true"
                         />
 
                         <span className="hidden sm:inline">
-                          Like
+                          Upvote
                         </span>
 
                         <span
