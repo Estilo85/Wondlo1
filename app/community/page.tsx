@@ -31,6 +31,11 @@ import {
 import ResultsNavbar from '@/components/ResultsNavbar';
 import Footer from '@/components/Footer';
 import { auth } from '@/lib/firebase-client';
+import {
+  COMMUNITY_REPORT_REASONS,
+  MAX_REPORT_DETAILS_LENGTH,
+  type CommunityReportReason,
+} from '@/lib/community-reports';
 import { resizePostImage } from '@/lib/image';
 
 type PostCategory = 'Trip Experience' | 'Safety Warning';
@@ -82,6 +87,12 @@ type LocalComment = {
 type DraftImage = {
   src: string;
   name: string;
+};
+
+type ReportTarget = {
+  postId: string;
+  commentId?: string;
+  label: string;
 };
 
 const COMMUNITY_POST_DRAFT_KEY = 'wondlo-community-post-draft-v1';
@@ -618,6 +629,7 @@ export default function CommunityPage() {
 
   const [userPosts, setUserPosts] = useState<CommunityPost[]>([]);
   const [communityError, setCommunityError] = useState('');
+  const [communityNotice, setCommunityNotice] = useState('');
 
   const allPosts = userPosts;
 
@@ -639,6 +651,12 @@ export default function CommunityPage() {
 
   const [sharePostId, setSharePostId] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const [reportReason, setReportReason] =
+    useState<CommunityReportReason | ''>('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const [postInteractions, setPostInteractions] = useState<
     Record<string, PostInteraction>
@@ -865,6 +883,13 @@ export default function CommunityPage() {
         setLinkCopied(false);
         setIsPostComposerOpen(false);
         setEditingPostId(null);
+        /*
+         * Reset directly rather than through closeReportModal: this listener
+         * is registered once, so it must only touch stable setters.
+         */
+        setReportTarget(null);
+        setReportReason('');
+        setReportDetails('');
       }
     };
 
@@ -1006,6 +1031,69 @@ export default function CommunityPage() {
       setCommunityError(
         error instanceof Error ? error.message : 'Unable to delete your post.'
       );
+    }
+  };
+
+  const openReportModal = (post: CommunityPost) => {
+    setOpenPostMenuId(null);
+    setCommunityError('');
+    setCommunityNotice('');
+    setReportReason('');
+    setReportDetails('');
+    setReportTarget({ postId: post.id, label: post.title });
+  };
+
+  const openCommentReportModal = (postId: string, comment: LocalComment) => {
+    setCommunityError('');
+    setCommunityNotice('');
+    setReportReason('');
+    setReportDetails('');
+    setReportTarget({
+      postId,
+      commentId: comment.id,
+      label: comment.text,
+    });
+  };
+
+  const closeReportModal = () => {
+    if (isSubmittingReport) {
+      return;
+    }
+
+    setReportTarget(null);
+    setReportReason('');
+    setReportDetails('');
+  };
+
+  const submitReport = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!reportTarget || !reportReason || isSubmittingReport) {
+      return;
+    }
+
+    setIsSubmittingReport(true);
+
+    try {
+      await sendCommunityRequest('/api/community/report', 'POST', {
+        postId: reportTarget.commentId ? undefined : reportTarget.postId,
+        commentId: reportTarget.commentId,
+        reason: reportReason,
+        details: reportDetails.trim(),
+      });
+      setReportTarget(null);
+      setReportReason('');
+      setReportDetails('');
+      setCommunityError('');
+      setCommunityNotice(
+        'Thank you. Our moderators will review this and take action if needed.'
+      );
+    } catch (error) {
+      setCommunityError(
+        error instanceof Error ? error.message : 'Unable to send your report.'
+      );
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -1601,6 +1689,15 @@ export default function CommunityPage() {
               </p>
             )}
 
+            {communityNotice && (
+              <p
+                role="status"
+                className="mt-3 text-center font-inter text-[14px] text-[#196469]"
+              >
+                {communityNotice}
+              </p>
+            )}
+
             {/* Active Filter Summary */}
             {hasActiveFilters && (
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-center">
@@ -1745,53 +1842,59 @@ export default function CommunityPage() {
                             {post.timestamp}
                           </span>
 
-                          {isOwnPost ? (
-                            <div className="relative">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setOpenPostMenuId((current) =>
-                                    current === post.id ? null : post.id
-                                  )
-                                }
-                                aria-label="Post options"
-                                aria-expanded={openPostMenuId === post.id}
-                                title="Post options"
-                                className="flex flex-shrink-0 items-center justify-center focus:outline-none"
-                              >
-                                <FiMoreHorizontal
-                                  className="h-[20px] w-[20px] text-black/50 sm:h-[22px] sm:w-[22px] lg:h-[24px] lg:w-[24px]"
-                                  strokeWidth={2}
-                                  aria-hidden="true"
-                                />
-                              </button>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenPostMenuId((current) =>
+                                  current === post.id ? null : post.id
+                                )
+                              }
+                              aria-label="Post options"
+                              aria-expanded={openPostMenuId === post.id}
+                              title="Post options"
+                              className="flex flex-shrink-0 items-center justify-center focus:outline-none"
+                            >
+                              <FiMoreHorizontal
+                                className="h-[20px] w-[20px] text-black/50 sm:h-[22px] sm:w-[22px] lg:h-[24px] lg:w-[24px]"
+                                strokeWidth={2}
+                                aria-hidden="true"
+                              />
+                            </button>
 
-                              {openPostMenuId === post.id && (
-                                <div className="absolute right-0 top-full z-20 mt-2 w-36 rounded-[8px] border border-[#7E6BB3]/30 bg-white p-1 shadow-lg">
+                            {openPostMenuId === post.id && (
+                              <div className="absolute right-0 top-full z-20 mt-2 w-36 rounded-[8px] border border-[#7E6BB3]/30 bg-white p-1 shadow-lg">
+                                {isOwnPost ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditPost(post)}
+                                      className="block w-full rounded-md px-3 py-2 text-left font-inter text-[14px] font-medium text-[#2B2740] hover:bg-[#EDE7FB]"
+                                    >
+                                      Update post
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void deletePost(post.id)
+                                      }
+                                      className="block w-full rounded-md px-3 py-2 text-left font-inter text-[14px] font-medium text-[#C51D14] hover:bg-[#FFF1E8]"
+                                    >
+                                      Delete post
+                                    </button>
+                                  </>
+                                ) : (
                                   <button
                                     type="button"
-                                    onClick={() => openEditPost(post)}
+                                    onClick={() => openReportModal(post)}
                                     className="block w-full rounded-md px-3 py-2 text-left font-inter text-[14px] font-medium text-[#2B2740] hover:bg-[#EDE7FB]"
                                   >
-                                    Update post
+                                    Report post
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void deletePost(post.id)}
-                                    className="block w-full rounded-md px-3 py-2 text-left font-inter text-[14px] font-medium text-[#C51D14] hover:bg-[#FFF1E8]"
-                                  >
-                                    Delete post
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <FiMoreHorizontal
-                              className="h-[20px] w-[20px] flex-shrink-0 text-black/50 sm:h-[22px] sm:w-[22px] lg:h-[24px] lg:w-[24px]"
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                          )}
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1971,6 +2074,21 @@ export default function CommunityPage() {
                                           Delete
                                         </button>
                                       </div>
+                                    )}
+
+                                    {!comment.ownedByMe && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openCommentReportModal(
+                                            post.id,
+                                            comment
+                                          )
+                                        }
+                                        className="font-inter text-[12px] font-semibold text-black/50 underline-offset-2 hover:text-[#7E6BB3] hover:underline sm:text-[13px]"
+                                      >
+                                        Report
+                                      </button>
                                     )}
                                   </div>
 
@@ -2405,6 +2523,133 @@ export default function CommunityPage() {
                     : editingPostId
                       ? 'Update Post'
                       : 'Post to Community'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {reportTarget && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4 py-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeReportModal();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-content-title"
+            className="w-full max-w-[560px] rounded-[18px] border border-[#EDE7FB] bg-[#FAF9FE] p-5 shadow-[0_20px_60px_rgba(43,39,64,0.3)] sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2
+                  id="report-content-title"
+                  className="font-poppins text-[22px] font-semibold text-[#2B2740] sm:text-[26px]"
+                >
+                  Report this {reportTarget.commentId ? 'comment' : 'post'}
+                </h2>
+
+                <p className="mt-1 font-inter text-[14px] text-black/60 sm:text-[15px]">
+                  Tell us what is wrong and our moderators will take a look.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeReportModal}
+                aria-label="Close report form"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[#2B2740] transition-colors hover:bg-[#EDE7FB]"
+              >
+                <FiX
+                  className="h-6 w-6"
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+
+            <form
+              onSubmit={submitReport}
+              className="mt-6 flex flex-col gap-5"
+            >
+              <div className="rounded-[10px] border border-[#7E6BB3]/30 bg-[#EDE7FB] px-4 py-3">
+                <p className="font-inter text-[12px] font-semibold uppercase tracking-wide text-black/50">
+                  Reported content
+                </p>
+
+                <p className="mt-1 line-clamp-3 font-inter text-[14px] leading-relaxed text-[#2B2740]">
+                  {reportTarget.label}
+                </p>
+              </div>
+
+              <fieldset>
+                <legend className="mb-2 font-inter text-[14px] font-semibold text-[#2B2740]">
+                  Reason
+                </legend>
+
+                <div className="flex flex-col gap-2">
+                  {COMMUNITY_REPORT_REASONS.map((reason) => (
+                    <label
+                      key={reason.value}
+                      className="flex cursor-pointer items-center gap-3 rounded-[8px] border border-[#7E6BB3]/30 bg-[#F6F4FE] px-4 py-3 font-inter text-[14px] text-[#2B2740] transition-colors hover:bg-[#EDE7FB]"
+                    >
+                      <input
+                        type="radio"
+                        name="report-reason"
+                        value={reason.value}
+                        checked={reportReason === reason.value}
+                        onChange={() => setReportReason(reason.value)}
+                        className="h-4 w-4 flex-shrink-0 accent-[#7E6BB3]"
+                      />
+
+                      <span>{reason.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div>
+                <label
+                  htmlFor="report-details"
+                  className="mb-2 block font-inter text-[14px] font-semibold text-[#2B2740]"
+                >
+                  Anything else?{' '}
+                  <span className="font-normal text-black/45">(optional)</span>
+                </label>
+
+                <textarea
+                  id="report-details"
+                  rows={3}
+                  value={reportDetails}
+                  maxLength={MAX_REPORT_DETAILS_LENGTH}
+                  onChange={(event) => setReportDetails(event.target.value)}
+                  placeholder="Add any detail that would help us review this."
+                  className="w-full resize-y rounded-[8px] border border-[#7E6BB3] bg-[#FAF9FE] px-4 py-3 font-inter text-[14px] text-[#2B2740] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-[#7E6BB3]/20 sm:text-[16px]"
+                />
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-[#7E6BB3]/20 pt-5 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeReportModal}
+                  disabled={isSubmittingReport}
+                  className="h-[48px] rounded-[8px] border border-[#2B2740] bg-[#F6F4FE] px-6 font-inter text-[15px] font-semibold text-[#2B2740] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={!reportReason || isSubmittingReport}
+                  className="h-[48px] rounded-[8px] bg-[linear-gradient(90deg,_#7E6BB3_25%,_#2B2740_100%)] px-7 font-inter text-[15px] font-semibold text-white shadow-[0_3px_5px_rgba(0,0,0,0.2)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSubmittingReport ? 'Sending...' : 'Send report'}
                 </button>
               </div>
             </form>

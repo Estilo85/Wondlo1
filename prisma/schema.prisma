@@ -27,6 +27,7 @@ model User {
   communityPosts     CommunityPost[]
   communityLikes     CommunityLike[]
   communityComments  CommunityComment[]
+  communityReports   CommunityReport[]
 }
 
 model SavedCard {
@@ -89,6 +90,7 @@ model CommunityPost {
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes     CommunityLike[]
   comments  CommunityComment[]
+  reports   CommunityReport[]
 
   @@index([createdAt])
   @@index([userId, createdAt])
@@ -107,14 +109,44 @@ model CommunityLike {
 }
 
 model CommunityComment {
-  id        String        @id @default(uuid())
+  id        String             @id @default(uuid())
   postId    String
   userId    String
-  text      String        @db.Text
-  createdAt DateTime      @default(now())
-  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      String             @db.Text
+  createdAt DateTime           @default(now())
+  post      CommunityPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reports   CommunityReport[]
 
   @@index([postId, createdAt])
   @@index([userId])
+}
+
+/*
+ * One row covers both kinds of report. Exactly one of postId or commentId is
+ * set, which the API enforces before writing: a report always points at real
+ * content that can be reviewed and removed.
+ *
+ * Removing reported content nulls the reference instead of deleting the row, so
+ * a moderation decision stays on record after the content itself is gone.
+ */
+model CommunityReport {
+  id         String            @id @default(uuid())
+  reporterId String
+  postId     String?
+  commentId  String?
+  reason     String
+  details    String?           @db.Text
+  status     String            @default("open")
+  resolution String?
+  createdAt  DateTime          @default(now())
+  resolvedAt DateTime?
+  reporter   User              @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  post       CommunityPost?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment    CommunityComment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([reporterId])
+  @@index([postId])
+  @@index([commentId])
 }

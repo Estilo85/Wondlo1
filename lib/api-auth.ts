@@ -74,3 +74,25 @@ export async function getOptionalUserId(request: Request): Promise<string | null
     return null;
   }
 }
+
+/*
+ * Addresses allowed to review community reports. Like DEV_UNLIMITED_EMAILS this
+ * is a comma separated list read from the environment, so granting or revoking
+ * moderator access is a deploy-time change rather than a schema change or a
+ * role that a compromised signup flow could grant itself. When the variable is
+ * absent the set is empty and nobody is a moderator.
+ */
+const COMMUNITY_ADMIN_EMAILS = new Set(
+  (process.env.COMMUNITY_ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+export function isCommunityAdmin(email: string | null | undefined): boolean {
+  if (!email || COMMUNITY_ADMIN_EMAILS.size === 0) {
+    return false;
+  }
+
+  return COMMUNITY_ADMIN_EMAILS.has(email.toLowerCase());
+}
