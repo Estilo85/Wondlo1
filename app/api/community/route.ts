@@ -98,6 +98,7 @@ export async function GET(request: Request) {
           text: comment.text,
           author: comment.user.name,
           authorAvatarUrl: comment.user.avatarUrl,
+          ownedByMe: viewerId === comment.userId,
         })),
       })),
     });

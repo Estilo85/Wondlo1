@@ -76,6 +76,7 @@ type LocalComment = {
   text: string;
   author?: string;
   authorAvatarUrl?: string | null;
+  ownedByMe?: boolean;
 };
 
 type DraftImage = {
@@ -651,6 +652,16 @@ export default function CommunityPage() {
     {}
   );
 
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(
+    null
+  );
+
+  const [commentEditDrafts, setCommentEditDrafts] = useState<
+    Record<string, string>
+  >({});
+
+  const [commentBusyId, setCommentBusyId] = useState<string | null>(null);
+
   const [localComments, setLocalComments] = useState<
     Record<string, LocalComment[]>
   >({});
@@ -1156,6 +1167,86 @@ export default function CommunityPage() {
       setCommunityError(
         error instanceof Error ? error.message : 'Unable to post your comment.'
       );
+    }
+  };
+
+  const startEditingComment = (comment: LocalComment) => {
+    setEditingCommentId(comment.id);
+    setCommentEditDrafts((current) => ({
+      ...current,
+      [comment.id]: comment.text,
+    }));
+    setCommunityError('');
+  };
+
+  const cancelEditingComment = () => {
+    setEditingCommentId(null);
+    setCommentEditDrafts((current) => {
+      const next = { ...current };
+
+      if (editingCommentId) {
+        delete next[editingCommentId];
+      }
+
+      return next;
+    });
+  };
+
+  const saveCommentEdit = async (postId: string, commentId: string) => {
+    const text = (commentEditDrafts[commentId] ?? '').trim();
+
+    if (!text || commentBusyId) {
+      return;
+    }
+
+    setCommentBusyId(commentId);
+
+    try {
+      await sendCommunityRequest(
+        `/api/community/${encodeURIComponent(postId)}/comments`,
+        'PATCH',
+        { commentId, text }
+      );
+      await loadCommunityPosts();
+      setCommunityError('');
+      cancelEditingComment();
+    } catch (error) {
+      setCommunityError(
+        error instanceof Error ? error.message : 'Unable to update this comment.'
+      );
+    } finally {
+      setCommentBusyId(null);
+    }
+  };
+
+  const deleteComment = async (postId: string, commentId: string) => {
+    if (commentBusyId) {
+      return;
+    }
+
+    if (
+      !window.confirm('Delete this comment? This cannot be undone.')
+    ) {
+      return;
+    }
+
+    setCommentBusyId(commentId);
+
+    try {
+      await sendCommunityRequest(
+        `/api/community/${encodeURIComponent(postId)}/comments`,
+        'DELETE',
+        { commentId }
+      );
+      cancelEditingComment();
+      await loadCommunityPosts();
+      setCommunityError('');
+    } catch (error) {
+      setCommunityError(
+        error instanceof Error ? error.message : 'Unable to delete this comment.'
+      );
+    } finally {
+      setCommentBusyId(null);
     }
   };
 
@@ -1820,41 +1911,133 @@ export default function CommunityPage() {
                     <div className="mt-4 border-t border-[#7E6BB3]/20 pt-4">
                       {comments.length > 0 && (
                         <div className="mb-4 space-y-3">
-                          {comments.map((comment) => (
-                            <div
-                              key={comment.id}
-                              className="flex items-start gap-3 rounded-[8px] bg-[#EDE7FB] px-4 py-3"
-                            >
-                              <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#C7B5F5]/75">
-                                {comment.authorAvatarUrl ? (
-                                  <Image
-                                    src={comment.authorAvatarUrl}
-                                    alt=""
-                                    fill
-                                    sizes="36px"
-                                    className="object-cover"
-                                    unoptimized
-                                  />
-                                ) : (
-                                  <FiUsers
-                                    className="h-5 w-5 text-[#7E6BB3]"
-                                    strokeWidth={1.6}
-                                    aria-hidden="true"
-                                  />
-                                )}
-                              </span>
+                          {comments.map((comment) => {
+                            const isEditingComment =
+                              editingCommentId === comment.id;
+                            const isCommentBusy = commentBusyId === comment.id;
 
-                              <div className="min-w-0 flex-1">
-                                <p className="font-inter text-[13px] font-semibold text-[#2B2740] sm:text-[14px]">
-                                  {comment.author || 'You'}
-                                </p>
+                            return (
+                              <div
+                                key={comment.id}
+                                className="flex items-start gap-3 rounded-[8px] bg-[#EDE7FB] px-4 py-3"
+                              >
+                                <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#C7B5F5]/75">
+                                  {comment.authorAvatarUrl ? (
+                                    <Image
+                                      src={comment.authorAvatarUrl}
+                                      alt=""
+                                      fill
+                                      sizes="36px"
+                                      className="object-cover"
+                                      unoptimized
+                                    />
+                                  ) : (
+                                    <FiUsers
+                                      className="h-5 w-5 text-[#7E6BB3]"
+                                      strokeWidth={1.6}
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                </span>
 
-                                <p className="mt-1 font-inter text-[14px] leading-relaxed text-[#2B2740] sm:text-[16px]">
-                                  {comment.text}
-                                </p>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <p className="font-inter text-[13px] font-semibold text-[#2B2740] sm:text-[14px]">
+                                      {comment.author || 'You'}
+                                    </p>
+
+                                    {comment.ownedByMe && !isEditingComment && (
+                                      <div className="flex items-center gap-3">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            startEditingComment(comment)
+                                          }
+                                          className="font-inter text-[12px] font-semibold text-[#7E6BB3] underline-offset-2 hover:underline sm:text-[13px]"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            void deleteComment(
+                                              post.id,
+                                              comment.id
+                                            )
+                                          }
+                                          disabled={isCommentBusy}
+                                          className="font-inter text-[12px] font-semibold text-[#C51D14] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50 sm:text-[13px]"
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {isEditingComment ? (
+                                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
+                                      <label
+                                        htmlFor={`comment-edit-${comment.id}`}
+                                        className="sr-only"
+                                      >
+                                        Edit your comment
+                                      </label>
+
+                                      <input
+                                        id={`comment-edit-${comment.id}`}
+                                        type="text"
+                                        value={
+                                          commentEditDrafts[comment.id] ?? ''
+                                        }
+                                        onChange={(event) =>
+                                          setCommentEditDrafts((current) => ({
+                                            ...current,
+                                            [comment.id]: event.target.value,
+                                          }))
+                                        }
+                                        disabled={isCommentBusy}
+                                        className="h-[40px] min-w-0 flex-1 rounded-[8px] border border-[#7E6BB3] bg-[#FAF9FE] px-3 font-inter text-[14px] text-[#2B2740] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-[#7E6BB3]/20 disabled:opacity-50 sm:text-[16px]"
+                                      />
+
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            void saveCommentEdit(
+                                              post.id,
+                                              comment.id
+                                            )
+                                          }
+                                          disabled={
+                                            isCommentBusy ||
+                                            !(
+                                              commentEditDrafts[comment.id] ??
+                                              ''
+                                            ).trim()
+                                          }
+                                          className="h-[40px] rounded-[8px] bg-[linear-gradient(90deg,_#7E6BB3_25%,_#2B2740_100%)] px-4 font-inter text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEditingComment}
+                                          disabled={isCommentBusy}
+                                          className="h-[40px] rounded-[8px] border border-[#7E6BB3] px-4 font-inter text-[14px] font-semibold text-[#2B2740] transition-colors hover:bg-[#F6F4FE] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="mt-1 font-inter text-[14px] leading-relaxed text-[#2B2740] sm:text-[16px]">
+                                      {comment.text}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
 
