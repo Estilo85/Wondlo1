@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { FiMenu, FiX } from 'react-icons/fi';
-import { auth } from '@/lib/firebase-client';
-import { signOut } from 'firebase/auth';
+import ProfileMenuButton from '@/components/ProfileMenuButton';
 
 const NAV_LINKS = [
   { href: '/', label: 'HOME', match: '/' },
@@ -19,7 +18,6 @@ export default function ResultsNavbar({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [profileOpen, setProfileOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const navbarBackground =
@@ -31,7 +29,6 @@ export default function ResultsNavbar({
 
   const closeMenus = () => {
     setMobileOpen(false);
-    setProfileOpen(false);
   };
 
   const startNewSearch = () => {
@@ -72,14 +69,6 @@ export default function ResultsNavbar({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [mobileOpen]);
-
-  const handleSignOut = async () => {
-    if (auth) {
-      await signOut(auth);
-    }
-
-    router.replace('/');
-  };
 
   return (
     <header
@@ -135,50 +124,7 @@ export default function ResultsNavbar({
               <span className="text-sm">→</span>
             </button>
 
-            <div className="relative flex-shrink-0">
-              <button
-                type="button"
-                aria-label={profileOpen ? 'Close profile menu' : 'Open profile menu'}
-                aria-expanded={profileOpen}
-                onClick={() => setProfileOpen((open) => !open)}
-                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#C7B5F5] bg-[#C7B5F5] text-white"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z"
-                  />
-                </svg>
-                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#3D8A1E] ring-2 ring-white" />
-              </button>
-
-              {profileOpen && (
-                <div className="absolute right-0 top-11 z-50 w-32 rounded-lg border border-[#EDE7FB] bg-white p-1 shadow-lg">
-                  <Link
-                    href="/settings"
-                    onClick={() => setProfileOpen(false)}
-                    className="block w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
-                  >
-                    Settings
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
+            <ProfileMenuButton />
 
             <button
               type="button"

@@ -33,6 +33,13 @@ function sanitizeAvatar(value: unknown): string | null | undefined {
   return trimmed;
 }
 
+export async function GET(request: Request) {
+  const authentication = await authenticateRequestUser(request);
+  if (!authentication.user) return authentication.response;
+
+  return NextResponse.json({ avatarUrl: authentication.user.avatarUrl });
+}
+
 export async function POST(request: Request) {
   const authentication = await authenticateRequestUser(request);
   if (!authentication.user) return authentication.response;
