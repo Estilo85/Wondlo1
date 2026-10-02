@@ -22,6 +22,11 @@ import {
   FiCheck,
   FiImage,
   FiStar,
+  FiBell,
+  FiCheckCircle,
+  FiCornerDownRight,
+  FiTag,
+  FiClock,
 } from 'react-icons/fi';
 import {
   FaWhatsapp,
@@ -37,14 +42,22 @@ import {
   MAX_REPORT_DETAILS_LENGTH,
   type CommunityReportReason,
 } from '@/lib/community-reports';
+import { MAX_POST_IMAGES } from '@/lib/community-images';
+import { formatTag, MAX_POST_TAGS, normaliseTag } from '@/lib/community-tags';
 import { resizePostImage } from '@/lib/image';
 
 type PostCategory = 'Trip Experience' | 'Safety Warning';
-type OpenDropdown = 'activity' | 'location' | null;
+type OpenDropdown = 'activity' | 'location' | 'sort' | null;
+
+type PostImage = {
+  src: string;
+  alt: string;
+};
 
 type CommunityPost = {
   id: string;
   author: string;
+  authorId: string;
   avatar: string;
   location: string;
   country: string;
@@ -57,8 +70,21 @@ type CommunityPost = {
   likes: number;
   comments: number;
   ownedByMe?: boolean;
-  image?: { src: string; alt: string };
+  tags: string[];
+  images: PostImage[];
+  pinned: boolean;
+  verified: boolean;
+  resolved: boolean;
 };
+
+type SortOption = 'top' | 'newest' | 'discussed' | 'trending';
+
+const SORT_OPTIONS: ReadonlyArray<{ value: SortOption; label: string }> = [
+  { value: 'top', label: 'Top' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'discussed', label: 'Most discussed' },
+  { value: 'trending', label: 'Trending' },
+];
 
 type FilterDropdownProps = {
   id: string;
@@ -81,18 +107,24 @@ type LocalComment = {
   id: string;
   text: string;
   author?: string;
+  authorId?: string;
   authorAvatarUrl?: string | null;
   ownedByMe?: boolean;
+  createdAt?: string;
+  editedAt?: string | null;
+  replies: LocalComment[];
 };
 
 type DraftImage = {
   src: string;
   name: string;
+  alt: string;
 };
 
 type ReportTarget = {
-  postId: string;
+  postId?: string;
   commentId?: string;
+  userId?: string;
   label: string;
 };
 
@@ -109,7 +141,7 @@ type SafetyReviewAnswers = Record<
   SafetyReviewScore | null
 >;
 
-const COMMUNITY_POST_DRAFT_KEY = 'wondlo-community-post-draft-v1';
+const COMMUNITY_POST_DRAFT_KEY = 'wondlo-community-post-draft-v2';
 
 const SAFETY_REVIEW_QUESTIONS: Array<{
   key: SafetyReviewQuestionKey;
@@ -166,6 +198,34 @@ function formatPostTimestamp(timestamp: string) {
   return `${Math.floor(elapsedHours / 24)}d ago`;
 }
 
+/*
+ * Comments get the same relative time as posts. Older than a week the exact date
+ * is more use than "12d ago", so anything past that switches format rather than
+ * making the reader do arithmetic.
+ */
+function formatCommentTimestamp(timestamp?: string) {
+  if (!timestamp) return '';
+
+  const created = new Date(timestamp).getTime();
+
+  if (!Number.isFinite(created)) return '';
+
+  const elapsedMinutes = Math.floor((Date.now() - created) / 60_000);
+
+  if (elapsedMinutes < 1) return 'Just now';
+  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+  if (elapsedMinutes < 60 * 24) return `${Math.floor(elapsedMinutes / 60)}h ago`;
+  if (elapsedMinutes < 60 * 24 * 7) {
+    return `${Math.floor(elapsedMinutes / (60 * 24))}d ago`;
+  }
+
+  return new Date(timestamp).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 async function sendCommunityRequest(
   path: string,
   method: 'POST' | 'PATCH' | 'DELETE',
@@ -180,7 +240,7 @@ async function sendCommunityRequest(
     },
     body: JSON.stringify(payload ?? {}),
   });
-  const result = await response.json();
+  const result = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     throw new Error(result.error || 'Unable to complete this action.');
@@ -189,11 +249,47 @@ async function sendCommunityRequest(
   return result;
 }
 
+/**
+ * Renders a large count the way the stat cards read best: 1,284 stays exact
+ * because it is useful, and 1,284 becomes "1.2k" only once the exact number is
+ * too long to sit in the card without wrapping.
+ */
+function formatStatValue(value: number) {
+  return value >= 10_000 ? `${(value / 1_000).toFixed(1)}k` : value.toLocaleString('en-GB');
+}
+
 const STATS = [
-  { label: 'Total Members', value: '500+', Icon: FiUsers },
-  { label: 'Total Posts', value: '1,200+', Icon: FiFileText },
-  { label: 'Active Warnings', value: '24', Icon: FiShield },
-];
+  { key: 'members', label: 'Total Members', Icon: FiUsers },
+  { key: 'posts', label: 'Total Posts', Icon: FiFileText },
+  { key: 'activeWarnings', label: 'Active Warnings', Icon: FiShield },
+] as const;
+
+type CommunityStats = {
+  members: number | null;
+  posts: number | null;
+  activeWarnings: number | null;
+};
+
+/*
+ * Engagement weighted towards conversation and reach rather than raw upvotes,
+ * then divided by age. Without the age term the newest post with one upvote
+ * would outrank a warning the community has been discussing for a week, which
+ * is the opposite of what "trending" should mean.
+ */
+function trendingScore(
+  post: CommunityPost,
+  interaction: PostInteraction | undefined
+) {
+  const likes = interaction?.likes ?? post.likes;
+  const comments = interaction?.comments ?? post.comments;
+  const shares = interaction?.shares ?? 0;
+  const ageHours = Math.max(
+    1,
+    (Date.now() - post.createdAt) / (60 * 60 * 1000)
+  );
+
+  return (likes + comments * 2 + shares * 3) / Math.pow(ageHours + 2, 1.5);
+}
 
 const CATEGORY_STYLES: Record<PostCategory, string> = {
   'Trip Experience': 'bg-[#EDE7FB] text-[#7E6BB3]',
@@ -639,6 +735,50 @@ function FilterDropdown({
 }
 
 
+/*
+ * Replaces a comment wherever it sits in the tree, keeping its replies. An edit
+ * only ever changes the text and the edited flag, so the reply list is carried
+ * over rather than rebuilt from a refetch.
+ */
+function replaceComment(
+  comments: LocalComment[],
+  commentId: string,
+  updated: LocalComment
+): LocalComment[] {
+  return comments.map((comment) => {
+    if (comment.id === commentId) {
+      return { ...comment, ...updated, replies: comment.replies };
+    }
+
+    if (comment.replies.length === 0) {
+      return comment;
+    }
+
+    return {
+      ...comment,
+      replies: replaceComment(comment.replies, commentId, updated),
+    };
+  });
+}
+
+/*
+ * Removes a comment and, when it was a top level one, its replies with it. The
+ * database cascades a deleted parent onto its replies, so dropping the whole
+ * branch locally is what matches the server.
+ */
+function removeComment(
+  comments: LocalComment[],
+  commentId: string
+): LocalComment[] {
+  return comments
+    .filter((comment) => comment.id !== commentId)
+    .map((comment) =>
+      comment.replies.length === 0
+        ? comment
+        : { ...comment, replies: removeComment(comment.replies, commentId) }
+    );
+}
+
 function PostDescription({ body }: { body: string }) {
   const measurementRef = useRef<HTMLParagraphElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -729,6 +869,14 @@ export default function CommunityPage() {
   const [userPosts, setUserPosts] = useState<CommunityPost[]>([]);
   const [communityError, setCommunityError] = useState('');
   const [communityNotice, setCommunityNotice] = useState('');
+  const [stats, setStats] = useState<CommunityStats>({
+    members: null,
+    posts: null,
+    activeWarnings: null,
+  });
+  const [sortBy, setSortBy] = useState<SortOption>('top');
+  const [selectedTag, setSelectedTag] = useState('');
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const [isSafetyReviewOpen, setIsSafetyReviewOpen] = useState(false);
   const [safetyReviewDropdown, setSafetyReviewDropdown] =
@@ -762,7 +910,9 @@ export default function CommunityPage() {
   const [draftActivity, setDraftActivity] = useState('');
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
-  const [draftImage, setDraftImage] = useState<DraftImage | null>(null);
+  const [draftImages, setDraftImages] = useState<DraftImage[]>([]);
+  const [draftTags, setDraftTags] = useState<string[]>([]);
+  const [draftTagInput, setDraftTagInput] = useState('');
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
   const [sharedPostId, setSharedPostId] = useState<string | null>(null);
@@ -780,6 +930,15 @@ export default function CommunityPage() {
     Record<string, PostInteraction>
   >({});
 
+  /*
+   * A post id that has an in-flight upvote. The count moves immediately and the
+   * button is disabled while the request runs, which stops a fast double click
+   * from sending two toggles that both read the same starting state.
+   */
+  const [pendingLikes, setPendingLikes] = useState<Record<string, boolean>>(
+    {}
+  );
+
   const [activeCommentPost, setActiveCommentPost] = useState<string | null>(
     null
   );
@@ -787,6 +946,16 @@ export default function CommunityPage() {
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
     {}
   );
+
+  /*
+   * Which comment a reply is being written under, per post. A null entry means
+   * the reply box is closed for that post.
+   */
+  const [replyTargets, setReplyTargets] = useState<
+    Record<string, string | null>
+  >({});
+
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
 
   const [editingCommentId, setEditingCommentId] = useState<string | null>(
     null
@@ -798,9 +967,22 @@ export default function CommunityPage() {
 
   const [commentBusyId, setCommentBusyId] = useState<string | null>(null);
 
+  /*
+   * A post id with a post level action in flight, so the menu that opened the
+   * warning and the post card cannot be triggered twice at once.
+   */
+  const [postBusyId, setPostBusyId] = useState<string | null>(null);
+
   const [localComments, setLocalComments] = useState<
     Record<string, LocalComment[]>
   >({});
+
+  /*
+   * Which image of a multi image post is on screen. A post with one image never
+   * touches this, and a post with several keeps the rest of the strip hidden
+   * until it is tapped.
+   */
+  const [imageIndexes, setImageIndexes] = useState<Record<string, number>>({});
 
   const loadCommunityPosts = useCallback(async () => {
     const token = await auth?.currentUser?.getIdToken();
@@ -817,6 +999,7 @@ export default function CommunityPage() {
       posts: Array<{
         id: string;
         author: string;
+        authorId: string;
         authorAvatarUrl: string | null;
         country: string;
         activity: string;
@@ -829,7 +1012,11 @@ export default function CommunityPage() {
         shares: number;
         likedByMe: boolean;
         ownedByMe: boolean;
-        image: string | null;
+        tags: string[];
+        images: PostImage[];
+        pinned: boolean;
+        verified: boolean;
+        resolved: boolean;
         commentsList: LocalComment[];
       }>;
     };
@@ -837,6 +1024,7 @@ export default function CommunityPage() {
     const posts = data.posts.map((post) => ({
       id: post.id,
       author: post.author,
+      authorId: post.authorId,
       avatar: post.authorAvatarUrl ?? '',
       location: `${post.country} · ${post.activity}`,
       country: post.country,
@@ -849,7 +1037,11 @@ export default function CommunityPage() {
       likes: post.likes,
       comments: post.comments,
       ownedByMe: post.ownedByMe,
-      ...(post.image ? { image: { src: post.image, alt: post.title } } : {}),
+      tags: post.tags,
+      images: post.images,
+      pinned: post.pinned,
+      verified: post.verified,
+      resolved: post.resolved,
     }));
 
     setUserPosts(posts);
@@ -875,10 +1067,60 @@ export default function CommunityPage() {
     }));
   }, []);
 
+  /*
+   * The three stat cards used to read "500+", "1,200+" and "24" from a constant,
+   * which meant they could be wrong indefinitely. They are now counted, and a
+   * failure leaves the dash rather than inventing a number.
+   */
+  const loadCommunityStats = useCallback(async () => {
+    try {
+      const response = await fetch('/api/community/stats', { cache: 'no-store' });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = (await response.json()) as CommunityStats;
+
+      setStats({
+        members: typeof data.members === 'number' ? data.members : null,
+        posts: typeof data.posts === 'number' ? data.posts : null,
+        activeWarnings:
+          typeof data.activeWarnings === 'number' ? data.activeWarnings : null,
+      });
+    } catch {
+      // A missing count is not worth surfacing: the cards fall back to a dash.
+    }
+  }, []);
+
+  const loadUnreadNotifications = useCallback(async () => {
+    if (!auth?.currentUser) {
+      setUnreadNotifications(0);
+      return;
+    }
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/community/notifications?unread=1', {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = (await response.json()) as { unreadCount?: number };
+      setUnreadNotifications(data.unreadCount ?? 0);
+    } catch {
+      // The badge simply stays where it was.
+    }
+  }, []);
+
   useEffect(() => {
     let isActive = true;
 
-    const refresh = async () => {
+    void (async () => {
       try {
         await loadCommunityPosts();
         if (isActive) setCommunityError('');
@@ -887,9 +1129,21 @@ export default function CommunityPage() {
           setCommunityError('Unable to sync community posts. Please try again.');
         }
       }
-    };
-
-    void refresh();
+    })();
+    void (async () => {
+      try {
+        await loadCommunityStats();
+      } catch {
+        /* already logged */
+      }
+    })();
+    void (async () => {
+      try {
+        await loadUnreadNotifications();
+      } catch {
+        /* already logged */
+      }
+    })();
 
     /*
      * The feed carries post images, so it is a heavy payload. Polling often
@@ -900,20 +1154,45 @@ export default function CommunityPage() {
 
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
-        void refresh();
+        void (async () => {
+          try {
+            await loadCommunityPosts();
+            if (isActive) setCommunityError('');
+          } catch {
+            if (isActive) {
+              setCommunityError(
+                'Unable to sync community posts. Please try again.'
+              );
+            }
+          }
+        })();
       }
     }, POLL_INTERVAL_MS);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         void refresh();
+        void loadUnreadNotifications();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const unsubscribe = auth
-      ? onAuthStateChanged(auth, () => void refresh())
+      ? onAuthStateChanged(auth, (user) => {
+          void refresh();
+          void loadCommunityStats();
+          void loadUnreadNotifications();
+
+          /*
+           * Signing in and out changes which posts are owned, which upvotes
+           * are ours and how many notifications are unread, so the counts and
+           * the badge both have to be read again from scratch.
+           */
+          if (!user) {
+            setUnreadNotifications(0);
+          }
+        })
       : undefined;
 
     return () => {
@@ -922,7 +1201,11 @@ export default function CommunityPage() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       unsubscribe?.();
     };
-  }, [loadCommunityPosts]);
+  }, [
+    loadCommunityPosts,
+    loadCommunityStats,
+    loadUnreadNotifications,
+  ]);
 
   useEffect(() => {
     if (!auth) return;
@@ -944,7 +1227,8 @@ export default function CommunityPage() {
             activity?: string;
             title?: string;
             body?: string;
-            image?: DraftImage | null;
+            images?: DraftImage[];
+            tags?: string[];
           };
 
           if (draft.category) setDraftCategory(draft.category);
@@ -952,7 +1236,8 @@ export default function CommunityPage() {
           if (draft.activity) setDraftActivity(draft.activity);
           if (draft.title) setDraftTitle(draft.title);
           if (draft.body) setDraftBody(draft.body);
-          if (draft.image) setDraftImage(draft.image);
+          if (draft.images) setDraftImages(draft.images);
+          if (draft.tags) setDraftTags(draft.tags);
           setIsPostComposerOpen(true);
         }
         window.sessionStorage.removeItem(COMMUNITY_POST_DRAFT_KEY);
@@ -1030,7 +1315,7 @@ export default function CommunityPage() {
 
     const query = searchTerm.trim().toLowerCase();
 
-    return allPosts.filter((post) => {
+    const filtered = allPosts.filter((post) => {
       const matchesSearch =
         !query ||
         [
@@ -1041,6 +1326,7 @@ export default function CommunityPage() {
           post.country,
           post.activity,
           post.category,
+          ...post.tags,
         ]
           .join(' ')
           .toLowerCase()
@@ -1054,30 +1340,98 @@ export default function CommunityPage() {
         selectedLocation === 'All Locations' ||
         post.country.toLowerCase() === selectedLocation.toLowerCase();
 
-      return matchesSearch && matchesActivity && matchesLocation;
-    }).sort((first, second) => {
-      const firstUpvotes = postInteractions[first.id]?.likes ?? first.likes;
-      const secondUpvotes = postInteractions[second.id]?.likes ?? second.likes;
-      return secondUpvotes - firstUpvotes || second.createdAt - first.createdAt;
+      const matchesTag = !selectedTag || post.tags.includes(selectedTag);
+
+      return matchesSearch && matchesActivity && matchesLocation && matchesTag;
     });
+
+    /*
+     * Sorting reads the interaction counts, so an upvote moves a post up under
+     * "Top" immediately rather than waiting for the next feed poll.
+     */
+    const sorted = [...filtered].sort((first, second) => {
+      const firstInteraction = postInteractions[first.id];
+      const secondInteraction = postInteractions[second.id];
+
+      const firstLikes = firstInteraction?.likes ?? first.likes;
+      const secondLikes = secondInteraction?.likes ?? second.likes;
+      const firstComments = firstInteraction?.comments ?? first.comments;
+      const secondComments = secondInteraction?.comments ?? second.comments;
+
+      if (sortBy === 'newest') {
+        return second.createdAt - first.createdAt;
+      }
+
+      if (sortBy === 'discussed') {
+        return (
+          secondComments - firstComments ||
+          secondLikes - firstLikes ||
+          second.createdAt - first.createdAt
+        );
+      }
+
+      if (sortBy === 'trending') {
+        return (
+          trendingScore(second, secondInteraction) -
+          trendingScore(first, firstInteraction)
+        );
+      }
+
+      return secondLikes - firstLikes || second.createdAt - first.createdAt;
+    });
+
+    /*
+     * Pinned posts are moderator picks, so they sit above the chosen sort on
+     * every option except "Newest", where recency is the whole point and a
+     * stale pinned post would only get in the way.
+     */
+    if (sortBy === 'newest') {
+      return sorted;
+    }
+
+    return [
+      ...sorted.filter((post) => post.pinned),
+      ...sorted.filter((post) => !post.pinned),
+    ];
   }, [
     allPosts,
     searchTerm,
     selectedActivity,
     selectedLocation,
+    selectedTag,
     sharedPostId,
+    sortBy,
     postInteractions,
   ]);
+
+  /*
+   * Every tag currently in the feed, so the filter only ever offers topics that
+   * exist. A brand new post with a tag nobody else used still shows up, because
+   * its own tag is in this list.
+   */
+  const availableTags = useMemo(() => {
+    const tags = new Set<string>();
+
+    for (const post of allPosts) {
+      for (const tag of post.tags) {
+        tags.add(tag);
+      }
+    }
+
+    return [...tags].sort((first, second) => first.localeCompare(second));
+  }, [allPosts]);
 
   const hasActiveFilters =
     searchTerm.trim() !== '' ||
     selectedActivity !== 'All Activities' ||
-    selectedLocation !== 'All Locations';
+    selectedLocation !== 'All Locations' ||
+    selectedTag !== '';
 
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedActivity('All Activities');
     setSelectedLocation('All Locations');
+    setSelectedTag('');
     setOpenDropdown(null);
   };
 
@@ -1174,7 +1528,9 @@ export default function CommunityPage() {
     setDraftActivity('');
     setDraftTitle('');
     setDraftBody('');
-    setDraftImage(null);
+    setDraftImages([]);
+    setDraftTags([]);
+    setDraftTagInput('');
     setEditingPostId(null);
   };
 
@@ -1186,31 +1542,34 @@ export default function CommunityPage() {
   };
 
   const openEditPost = (post: CommunityPost) => {
-    const isOwnPost = userPosts.some(
-      (userPost) => userPost.id === post.id
-    );
-
-    if (!isOwnPost) {
+    /*
+     * ownedByMe comes from the server, which is the only place that can be
+     * trusted: it is computed from the signed in user against the post's author.
+     * This used to check the post list for the post's own id, which is always
+     * true for a post that is on screen, so the guard never did anything.
+     */
+    if (!post.ownedByMe) {
       return;
     }
 
     setOpenPostMenuId(null);
-  setOpenDropdown(null);
-  setComposerDropdown(null);
+    setOpenDropdown(null);
+    setComposerDropdown(null);
     setEditingPostId(post.id);
     setDraftCategory(post.category);
     setDraftCountry(post.country);
     setDraftActivity(post.activity);
     setDraftTitle(post.title);
     setDraftBody(post.body);
-    setDraftImage(
-      post.image
-        ? {
-            src: post.image.src,
-            name: 'Current image',
-          }
-        : null
+    setDraftImages(
+      post.images.map((image, index) => ({
+        src: image.src,
+        name: `Image ${index + 1}`,
+        alt: image.alt,
+      }))
     );
+    setDraftTags(post.tags);
+    setDraftTagInput('');
     setIsPostComposerOpen(true);
   };
 
@@ -1263,6 +1622,24 @@ export default function CommunityPage() {
     });
   };
 
+  const openMemberReportModal = (
+    post: CommunityPost,
+    comment?: LocalComment
+  ) => {
+    setOpenPostMenuId(null);
+    setCommunityError('');
+    setCommunityNotice('');
+    setReportReason('');
+    setReportDetails('');
+    setReportTarget({
+      postId: post.id,
+      userId: post.authorId,
+      label: comment
+        ? `${post.author} — "${comment.text}"`
+        : `${post.author} — "${post.title}"`,
+    });
+  };
+
   const closeReportModal = () => {
     if (isSubmittingReport) {
       return;
@@ -1284,8 +1661,11 @@ export default function CommunityPage() {
 
     try {
       await sendCommunityRequest('/api/community/report', 'POST', {
-        postId: reportTarget.commentId ? undefined : reportTarget.postId,
+        postId: reportTarget.commentId || reportTarget.userId
+          ? undefined
+          : reportTarget.postId,
         commentId: reportTarget.commentId,
+        userId: reportTarget.userId,
         reason: reportReason,
         details: reportDetails.trim(),
       });
@@ -1314,22 +1694,84 @@ export default function CommunityPage() {
   const handlePostImageChange = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = event.target.files?.[0];
+    const files = [...(event.target.files ?? [])];
     event.target.value = '';
 
-    if (!file) {
+    if (files.length === 0) {
       return;
     }
 
-    const result = await resizePostImage(file);
+    const remaining = MAX_POST_IMAGES - draftImages.length;
 
-    if (!result.ok) {
-      setCommunityError(result.error);
+    if (remaining <= 0) {
+      setCommunityError(
+        `You can add up to ${MAX_POST_IMAGES} images to a post.`
+      );
       return;
     }
 
+    /*
+     * Selecting several files at once is allowed, so extras are dropped rather
+     * than failing the whole batch: a photographer picking six frames should
+     * still get their first four.
+     */
+    if (files.length > remaining) {
+      setCommunityError(
+        `Only the first ${remaining} image${remaining === 1 ? '' : 's'} ${
+          remaining === 1 ? 'was' : 'were'
+        } added.`
+      );
+    }
+
+    const accepted: DraftImage[] = [];
+
+    for (const file of files.slice(0, remaining)) {
+      const result = await resizePostImage(file);
+
+      if (!result.ok) {
+        setCommunityError(result.error);
+        break;
+      }
+
+      accepted.push({
+        src: result.dataUrl,
+        name: result.name,
+        alt: `${draftTitle.trim() || 'Post'} image ${accepted.length + 1}`,
+      });
+    }
+
+    if (accepted.length > 0) {
+      setDraftImages((current) => [...current, ...accepted]);
+    }
+  };
+
+  const removePostImage = (index: number) => {
+    setDraftImages((current) => current.filter((_, i) => i !== index));
+  };
+
+  const addDraftTag = () => {
+    const tag = normaliseTag(draftTagInput);
+
+    if (!tag) {
+      setDraftTagInput('');
+      return;
+    }
+
+    if (draftTags.includes(tag)) {
+      setDraftTagInput('');
+      return;
+    }
+
+    if (draftTags.length >= MAX_POST_TAGS) {
+      setCommunityError(
+        `You can add up to ${MAX_POST_TAGS} topics to a post.`
+      );
+      return;
+    }
+
+    setDraftTags((current) => [...current, tag]);
+    setDraftTagInput('');
     setCommunityError('');
-    setDraftImage({ src: result.dataUrl, name: result.name });
   };
 
   const submitAdventurePost = async (
@@ -1358,7 +1800,8 @@ export default function CommunityPage() {
             activity: draftActivity,
             title,
             body,
-            image: draftImage,
+            images: draftImages,
+            tags: draftTags,
           })
         );
       } catch {
@@ -1381,7 +1824,8 @@ export default function CommunityPage() {
         activity: draftActivity,
         title,
         body,
-        image: draftImage?.src ?? null,
+        images: draftImages.map((image) => ({ src: image.src, alt: image.alt })),
+        tags: draftTags,
       };
 
       if (editingPostId) {
@@ -1397,6 +1841,7 @@ export default function CommunityPage() {
       setIsPostComposerOpen(false);
       setCommunityError('');
       await loadCommunityPosts();
+      await loadCommunityStats();
     } catch (error) {
       setCommunityError(
         error instanceof Error ? error.message : 'Unable to save your post.'
@@ -1408,27 +1853,68 @@ export default function CommunityPage() {
 
   const toggleLike = async (postId: string) => {
     const interaction = postInteractions[postId];
-    if (!interaction) return;
+
+    if (!interaction || pendingLikes[postId]) {
+      return;
+    }
+
+    /*
+     * The count and the pressed state move before the request goes out, so the
+     * button responds on the click rather than after a round trip. If the write
+     * fails both go back to exactly what they were.
+     */
+    const nextLiked = !interaction.liked;
+    const previous = interaction;
+
+    setPendingLikes((current) => ({ ...current, [postId]: true }));
+    setPostInteractions((current) =>
+      current[postId]
+        ? {
+            ...current,
+            [postId]: {
+              ...current[postId],
+              liked: nextLiked,
+              likes: Math.max(
+                0,
+                current[postId].likes + (nextLiked ? 1 : -1)
+              ),
+            },
+          }
+        : current
+    );
 
     try {
       const result = await sendCommunityRequest(
         `/api/community/${encodeURIComponent(postId)}/like`,
         'POST',
-        { liked: !interaction.liked }
+        { liked: nextLiked }
       );
-      setPostInteractions((current) => ({
-        ...current,
-        [postId]: {
-          ...current[postId],
-          liked: result.liked,
-          likes: result.likes,
-        },
-      }));
+      setPostInteractions((current) =>
+        current[postId]
+          ? {
+              ...current,
+              [postId]: {
+                ...current[postId],
+                liked: result.liked,
+                likes: result.likes,
+              },
+            }
+          : current
+      );
       setCommunityError('');
     } catch (error) {
+      setPostInteractions((current) =>
+        current[postId] ? { ...current, [postId]: previous } : current
+      );
       setCommunityError(
         error instanceof Error ? error.message : 'Unable to update this upvote.'
       );
+    } finally {
+      setPendingLikes((current) => {
+        const next = { ...current };
+        delete next[postId];
+        return next;
+      });
     }
   };
 
@@ -1438,31 +1924,99 @@ export default function CommunityPage() {
     );
   };
 
+  const openReplyBox = (postId: string, commentId: string) => {
+    setReplyTargets((current) => ({
+      ...current,
+      [postId]: current[postId] === commentId ? null : commentId,
+    }));
+  };
+
+  /*
+   * Applies a comment change to local state instead of reloading the whole feed.
+   * A reply arrives with the id of the comment it hangs from, which is exactly
+   * what the server returns, so a new comment appears the moment the write lands
+   * rather than a second later. The server's total is what the counter shows,
+   * so it never disagrees with the list.
+   */
+  const applyCommentChange = (
+    postId: string,
+    totalComments: number | null,
+    change: (comments: LocalComment[]) => LocalComment[]
+  ) => {
+    setLocalComments((current) => ({
+      ...current,
+      [postId]: change(current[postId] ?? []),
+    }));
+
+    if (totalComments === null) {
+      return;
+    }
+
+    setPostInteractions((current) =>
+      current[postId]
+        ? {
+            ...current,
+            [postId]: { ...current[postId], comments: totalComments },
+          }
+        : current
+    );
+  };
+
   const submitComment = async (
     event: React.FormEvent<HTMLFormElement>,
-    postId: string
+    postId: string,
+    parentId: string | null = null
   ) => {
     event.preventDefault();
 
-    const text = (commentDrafts[postId] ?? '').trim();
+    const draftKey = parentId ?? postId;
+    const text = (commentDrafts[draftKey] ?? '').trim();
 
     if (!text) {
       return;
     }
 
+    setCommentBusyId(draftKey);
+
     try {
-      await sendCommunityRequest(
+      const result = await sendCommunityRequest(
         `/api/community/${encodeURIComponent(postId)}/comments`,
         'POST',
-        { text }
+        { text, parentId: parentId ?? undefined }
       );
-      await loadCommunityPosts();
+
+      const newComment = {
+        ...result.comment,
+        replies: [],
+      } satisfies LocalComment;
+
+      if (parentId) {
+        applyCommentChange(
+          postId,
+          result.comments,
+          (comments) =>
+            comments.map((comment) =>
+              comment.id === parentId
+                ? { ...comment, replies: [...comment.replies, newComment] }
+                : comment
+            )
+        );
+        setReplyTargets((current) => ({ ...current, [postId]: null }));
+      } else {
+        applyCommentChange(postId, result.comments, (comments) => [
+          ...comments,
+          newComment,
+        ]);
+      }
+
+      setCommentDrafts((current) => ({ ...current, [draftKey]: '' }));
       setCommunityError('');
-      setCommentDrafts((current) => ({ ...current, [postId]: '' }));
     } catch (error) {
       setCommunityError(
         error instanceof Error ? error.message : 'Unable to post your comment.'
       );
+    } finally {
+      setCommentBusyId(null);
     }
   };
 
@@ -1498,12 +2052,22 @@ export default function CommunityPage() {
     setCommentBusyId(commentId);
 
     try {
-      await sendCommunityRequest(
+      const result = await sendCommunityRequest(
         `/api/community/${encodeURIComponent(postId)}/comments`,
         'PATCH',
         { commentId, text }
       );
-      await loadCommunityPosts();
+
+      const updated = result.comment;
+
+      /*
+       * An edit changes the text and the edited flag, never the total, so null
+       * here leaves the counter that is already on screen alone.
+       */
+      applyCommentChange(postId, null, (comments) =>
+        replaceComment(comments, commentId, updated)
+      );
+
       setCommunityError('');
       cancelEditingComment();
     } catch (error) {
@@ -1529,13 +2093,16 @@ export default function CommunityPage() {
     setCommentBusyId(commentId);
 
     try {
-      await sendCommunityRequest(
+      const result = await sendCommunityRequest(
         `/api/community/${encodeURIComponent(postId)}/comments`,
         'DELETE',
         { commentId }
       );
+
+      applyCommentChange(postId, result.comments, (comments) =>
+        removeComment(comments, commentId)
+      );
       cancelEditingComment();
-      await loadCommunityPosts();
       setCommunityError('');
     } catch (error) {
       setCommunityError(
@@ -1546,7 +2113,17 @@ export default function CommunityPage() {
     }
   };
 
+  /*
+   * A share is only counted for a signed in member, because the count is a
+   * reach metric rather than a personal action and the endpoint needs a session.
+   * Reporting that here stops a signed out visitor being told their share was
+   * recorded when nothing was written.
+   */
   const incrementShareCount = async (postId: string) => {
+    if (!auth?.currentUser) {
+      return;
+    }
+
     setPostInteractions((current) => {
       const interaction = current[postId];
 
@@ -1564,14 +2141,12 @@ export default function CommunityPage() {
     });
 
     try {
-      const response = await sendCommunityRequest(
+      const result = await sendCommunityRequest(
         `/api/community/${encodeURIComponent(postId)}/share`,
         'POST'
       );
 
-      const data = (await response.json()) as { shares?: number };
-
-      if (typeof data.shares === 'number') {
+      if (typeof result.shares === 'number') {
         setPostInteractions((current) => {
           const interaction = current[postId];
 
@@ -1581,12 +2156,15 @@ export default function CommunityPage() {
 
           return {
             ...current,
-            [postId]: { ...interaction, shares: data.shares! },
+            [postId]: { ...interaction, shares: result.shares },
           };
         });
       }
     } catch {
-      // The optimistic count stays visible; the next feed load reconciles it.
+      /*
+       * The optimistic count stays visible: a share genuinely happened, and the
+       * next feed load reconciles the number against the database.
+       */
     }
   };
 
@@ -1710,11 +2288,44 @@ export default function CommunityPage() {
       ) {
         return;
       }
+
+      /*
+       * Cancelling the native share sheet is a choice; anything else means the
+       * link could not be copied or the share sheet failed, and the visitor
+       * should be told rather than left with a dialog that did nothing.
+       */
+      setLinkCopied(false);
+      setCommunityError(
+        'We could not share this post. Try copying the link instead.'
+      );
     }
   };
 
+  /*
+ * Marks a safety warning as still current, or reopens one the author has
+ * resolved. Only the author can do it, and only on a Safety Warning, so the
+ * button is not offered anywhere else.
+ */
   const shareTarget =
     allPosts.find((post) => post.id === sharePostId) ?? null;
+
+  /*
+   * A post can disappear while its share dialog is open, which used to leave the
+   * dialog stuck on screen with nothing in it. Closing it is the safe reaction:
+   * the share simply did not happen.
+   */
+  useEffect(() => {
+    if (!sharePostId || shareTarget) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setSharePostId(null);
+      setLinkCopied(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [sharePostId, shareTarget]);
 
   const isSharedPostView = Boolean(sharedPostId);
 
@@ -1755,9 +2366,9 @@ export default function CommunityPage() {
 
             {/* Statistics Cards */}
             <div className="mt-10 flex flex-col items-center justify-center gap-5 md:flex-row md:gap-8 lg:mt-11 lg:gap-[36px]">
-              {STATS.map(({ label, value, Icon }) => (
+              {STATS.map(({ key, label, Icon }) => (
                 <div
-                  key={label}
+                  key={key}
                   className="flex h-[120px] w-full max-w-[300px] items-center rounded-[10px] bg-[#7E6BB3] px-5 text-white"
                 >
                   <div className="flex h-[55px] w-[55px] flex-shrink-0 items-center justify-center rounded-full border border-white">
@@ -1773,8 +2384,15 @@ export default function CommunityPage() {
                       {label}
                     </span>
 
+                    {/*
+                     * A dash while the count loads or after it fails, rather
+                     * than a placeholder number that could be mistaken for a
+                     * real total.
+                     */}
                     <span className="mt-1 font-inter text-[32px] font-bold leading-none text-white lg:text-[36px]">
-                      {value}
+                      {stats[key] === null
+                        ? '—'
+                        : formatStatValue(stats[key] as number)}
                     </span>
                   </div>
                 </div>
@@ -1782,7 +2400,7 @@ export default function CommunityPage() {
             </div>
 
             {/* Search Section */}
-            <div className="relative z-30 mt-10 flex min-h-[106px] w-full items-center rounded-[10px] border-[1.5px] border-[#7E6BB3] bg-transparent px-5 py-5 lg:mt-[30px] lg:h-[106px] lg:px-[55px]">
+            <div className="relative z-30 mt-10 w-full rounded-[10px] border-[1.5px] border-[#7E6BB3] bg-transparent px-5 py-5 lg:mt-[30px] lg:px-[55px]">
               <div className="flex w-full flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_180px_180px] md:items-center md:gap-4 xl:flex xl:flex-row xl:justify-between xl:gap-8">
                 <div className="relative w-full min-w-0 xl:w-[580px] xl:flex-shrink-0">
                   <FiSearch
@@ -1838,8 +2456,124 @@ export default function CommunityPage() {
                     setOpenDropdown(null);
                   }}
                 />
+
+                {/*
+                 * Sorting used to be hardwired to "most upvoted". The order is
+                 * a third dropdown rather than a segmented control so it sits
+                 * with the other feed controls and reads the same on mobile.
+                 */}
+                <FilterDropdown
+                  id="sort-filter"
+                  label="Sort posts"
+                  options={SORT_OPTIONS.map((option) => option.label)}
+                  value={
+                    SORT_OPTIONS.find((option) => option.value === sortBy)
+                      ?.label ?? 'Top'
+                  }
+                  isOpen={openDropdown === 'sort'}
+                  onToggle={() =>
+                    setOpenDropdown((current) =>
+                      current === 'sort' ? null : 'sort'
+                    )
+                  }
+                  onChange={(label) => {
+                    const option = SORT_OPTIONS.find(
+                      (entry) => entry.label === label
+                    );
+
+                    if (option) {
+                      setSortBy(option.value);
+                    }
+
+                    setOpenDropdown(null);
+                  }}
+                />
               </div>
             </div>
+
+            {/* Notifications */}
+            <div className="mt-4 flex justify-end">
+              <Link
+                href="/community/notifications"
+                className="relative inline-flex h-[48px] items-center gap-2 rounded-[8px] border border-[#7E6BB3] bg-[#F6F4FE] px-5 font-inter text-[15px] font-semibold text-[#2B2740] transition-colors hover:bg-[#EDE7FB]"
+              >
+                <FiBell
+                  className="h-[20px] w-[20px]"
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                />
+
+                <span>Notifications</span>
+
+                {/*
+                 * The count is announced politely rather than assertively: a
+                 * reply arriving is worth noticing but not worth interrupting
+                 * whatever the visitor is reading.
+                 */}
+                {unreadNotifications > 0 && (
+                  <span
+                    role="status"
+                    aria-live="polite"
+                    className="ml-1 flex h-[24px] min-w-[24px] items-center justify-center rounded-full bg-[#C51D14] px-2 font-inter text-[12px] font-semibold text-white"
+                  >
+                    {unreadNotifications > 99
+                      ? '99+'
+                      : unreadNotifications}
+                  </span>
+                )}
+              </Link>
+            </div>
+
+            {/*
+             * Topics are chips rather than a dropdown: they double as a summary
+             * of what people are actually posting about, which the fixed
+             * activity and location lists cannot show.
+             */}
+            {availableTags.length > 0 && (
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <span className="flex items-center gap-1 font-inter text-[13px] font-semibold uppercase tracking-wide text-black/45">
+                  <FiTag
+                    className="h-[14px] w-[14px]"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  Topics
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTag('')}
+                  aria-pressed={selectedTag === ''}
+                  className={`rounded-full px-3 py-1 font-inter text-[13px] font-semibold transition-colors ${
+                    selectedTag === ''
+                      ? 'bg-[#7E6BB3] text-white'
+                      : 'bg-[#EDE7FB] text-[#7E6BB3] hover:bg-[#C7B5F5]'
+                  }`}
+                >
+                  All
+                </button>
+
+                {availableTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() =>
+                      setSelectedTag((current) =>
+                        current === tag ? '' : tag
+                      )
+                    }
+                    aria-pressed={selectedTag === tag}
+                    className={`rounded-full px-3 py-1 font-inter text-[13px] font-semibold transition-colors ${
+                      selectedTag === tag
+                        ? 'bg-[#7E6BB3] text-white'
+                        : 'bg-[#EDE7FB] text-[#7E6BB3] hover:bg-[#C7B5F5]'
+                    }`}
+                  >
+                    {formatTag(tag)}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="mt-8 flex flex-col items-center justify-center gap-5 lg:flex-row lg:gap-6">
@@ -2135,16 +2869,23 @@ export default function CommunityPage() {
                   </div>
 
                   {/* Image Preview */}
-                  {post.image && (
-                    <div className="relative mt-4 h-[190px] w-full overflow-hidden rounded-[10px] sm:mt-5 sm:h-[220px] lg:mt-2 lg:h-[260px]">
-                      <Image
-                        src={post.image.src}
-                        alt={post.image.alt}
-                        fill
-                        sizes="(max-width: 1316px) 100vw, 1256px"
-                        className="object-cover"
-                        unoptimized={post.image.src.startsWith('data:')}
-                      />
+                  {post.images.length > 0 && (
+                    <div className="relative mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2 lg:mt-2">
+                      {post.images.map((image, index) => (
+                        <div
+                          key={`${post.id}-image-${index}`}
+                          className="relative h-[190px] w-full overflow-hidden rounded-[10px] sm:h-[220px] lg:h-[240px]"
+                        >
+                          <Image
+                            src={image.src}
+                            alt={image.alt ?? `${post.title} image ${index + 1}`}
+                            fill
+                            sizes="(max-width: 1316px) 100vw, 600px"
+                            className="object-cover"
+                            unoptimized={image.src.startsWith('data:')}
+                          />
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -2951,67 +3692,75 @@ export default function CommunityPage() {
               {/* Image Upload */}
               <div>
                 <span className="mb-2 block font-inter text-[14px] font-semibold text-[#2B2740]">
-                  Image{' '}
+                  Images{' '}
                   <span className="font-normal text-black/45">
-                    (optional)
+                    (optional, up to {MAX_POST_IMAGES})
                   </span>
                 </span>
 
-                {draftImage ? (
-                  <div className="relative overflow-hidden rounded-[10px] border border-[#7E6BB3]/30">
-                    <div className="relative h-[220px] w-full sm:h-[280px]">
-                      <Image
-                        src={draftImage.src}
-                        alt="Post image preview"
-                        fill
-                        unoptimized
-                        className="object-cover"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 bg-[#EDE7FB] px-4 py-3">
-                      <span className="min-w-0 truncate font-inter text-[13px] text-[#2B2740]">
-                        {draftImage.name}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => setDraftImage(null)}
-                        className="flex flex-shrink-0 items-center gap-1 font-inter text-[13px] font-semibold text-[#7E6BB3] hover:underline"
+                {draftImages.length > 0 && (
+                  <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                    {draftImages.map((image, index) => (
+                      <div
+                        key={`${image.name}-${index}`}
+                        className="relative overflow-hidden rounded-[10px] border border-[#7E6BB3]/30"
                       >
-                        <FiX
-                          className="h-4 w-4"
-                          aria-hidden="true"
-                        />
-                        Remove
-                      </button>
-                    </div>
+                        <div className="relative h-[180px] w-full sm:h-[220px]">
+                          <Image
+                            src={image.src}
+                            alt={image.alt}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3 bg-[#EDE7FB] px-4 py-2">
+                          <span className="min-w-0 truncate font-inter text-[12px] text-[#2B2740]">
+                            {image.name}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => removePostImage(index)}
+                            className="flex flex-shrink-0 items-center gap-1 font-inter text-[12px] font-semibold text-[#7E6BB3] hover:underline"
+                          >
+                            <FiX
+                              className="h-4 w-4"
+                              aria-hidden="true"
+                            />
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <label
-                    htmlFor="new-post-image"
-                    className="flex min-h-[130px] cursor-pointer flex-col items-center justify-center rounded-[10px] border border-dashed border-[#7E6BB3] bg-[#F6F4FE] px-5 text-center transition-colors hover:bg-[#EDE7FB]"
-                  >
-                    <FiImage
-                      className="h-8 w-8 text-[#7E6BB3]"
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                    />
-
-                    <span className="mt-2 font-inter text-[14px] font-semibold text-[#7E6BB3]">
-                      Add an image
-                    </span>
-
-                    <span className="mt-1 font-inter text-[12px] text-black/50">
-                      Choose an image from your device
-                    </span>
-                  </label>
                 )}
+
+                <label
+                  htmlFor="new-post-image"
+                  className="flex min-h-[110px] cursor-pointer flex-col items-center justify-center rounded-[10px] border border-dashed border-[#7E6BB3] bg-[#F6F4FE] px-5 text-center transition-colors hover:bg-[#EDE7FB]"
+                >
+                  <FiImage
+                    className="h-8 w-8 text-[#7E6BB3]"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+
+                  <span className="mt-2 font-inter text-[14px] font-semibold text-[#7E6BB3]">
+                    Add images
+                  </span>
+
+                  <span className="mt-1 font-inter text-[12px] text-black/50">
+                    Choose up to {MAX_POST_IMAGES} images from your device
+                  </span>
+                </label>
 
                 <input
                   id="new-post-image"
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handlePostImageChange}
                   className="sr-only"
                 />

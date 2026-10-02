@@ -14,11 +14,19 @@ model User {
   name               String
   email              String    @unique
   avatarUrl          String?   @db.Text
+  bio                String?   @db.Text
   freeSearchesUsed   Int       @default(0)
   plan               String    @default("free_trial")
   searchAllowance    Int       @default(3)
   searchAllowanceUsed Int      @default(0)
   cycleEndsAt        DateTime?
+  /*
+   * A suspended account keeps its content but cannot post, comment or report
+   * until suspendedUntil passes. Moderators set this from a user report, which
+   * is why it lives on the user rather than on any single report row.
+   */
+  suspendedUntil     DateTime?
+  suspensionReason   String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   searches           Search[]
@@ -29,6 +37,8 @@ model User {
   communityComments  CommunityComment[]
   communityReports   CommunityReport[]
   safetyReviews      SafetyReview[]
+  communityNotifications CommunityNotification[]
+  reportsAgainstMe   CommunityReport[] @relation("ReportedUser")
 }
 
 model SavedCard {
@@ -85,7 +95,21 @@ model CommunityPost {
   title     String
   body      String             @db.Text
   image     String?            @db.Text
+  /*
+   * Images are stored as data URLs, so the payload a post carries is bounded
+   * by how many the composer accepts. The first entry mirrors `image` for older
+   * rows and for the single-image paths that still read it.
+   */
+  images    CommunityPostImage[]
+  tags      String[]           @default([])
   shareCount Int               @default(0)
+  /*
+   * Moderation state. pinnedAt and verifiedAt are moderator only; resolvedAt
+   * can also be set by the author of a Safety Warning that is no longer true.
+   */
+  pinnedAt  DateTime?
+  verifiedAt DateTime?
+  resolvedAt DateTime?
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -95,6 +119,19 @@ model CommunityPost {
 
   @@index([createdAt])
   @@index([userId, createdAt])
+  @@index([category, createdAt])
+  @@index([pinnedAt, createdAt])
+}
+
+model CommunityPostImage {
+  id       String        @id @default(uuid())
+  postId   String
+  data     String        @db.Text
+  alt      String?
+  position Int           @default(0)
+  post     CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, position])
 }
 
 model CommunityLike {
@@ -114,19 +151,29 @@ model CommunityComment {
   postId    String
   userId    String
   text      String             @db.Text
+  /*
+   * Replies hang off a top level comment. The API flattens a reply to a reply
+   * onto its root rather than storing a third level, so the tree stays two
+   * deep and a parent is never orphaned.
+   */
+  parentId  String?
+  editedAt  DateTime?
   createdAt DateTime           @default(now())
   post      CommunityPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    CommunityComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   CommunityComment[] @relation("CommentReplies")
   reports   CommunityReport[]
 
   @@index([postId, createdAt])
+  @@index([postId, parentId, createdAt])
   @@index([userId])
 }
 
 /*
- * One row covers both kinds of report. Exactly one of postId or commentId is
- * set, which the API enforces before writing: a report always points at real
- * content that can be reviewed and removed.
+ * One row covers every kind of report. Exactly one of postId, commentId or
+ * reportedUserId is set, which the API enforces before writing: a report always
+ * points at real content or a real account that can be reviewed.
  *
  * Removing reported content nulls the reference instead of deleting the row, so
  * a moderation decision stays on record after the content itself is gone.
@@ -136,20 +183,57 @@ model CommunityReport {
   reporterId String
   postId     String?
   commentId  String?
+  reportedUserId String?
   reason     String
   details    String?           @db.Text
   status     String            @default("open")
   resolution String?
+  /*
+   * Holds "<reporterId>:<kind>:<targetId>" while the report is open and null
+   * once it is resolved. The unique constraint on this column is what stops a
+   * double click queueing the same complaint twice: the old code relied on a
+   * read-then-write check that two concurrent requests could both pass. Postgres
+   * allows any number of nulls in a unique index, which is what lets a member
+   * report the same thing again once the first report has been dealt with.
+   */
+  openKey    String?           @unique
+  /* Kept for moderators only: never returned to the reporter or the feed. */
+  moderatorNote String?        @db.Text
+  moderatedBy   String?
+  appealNote     String?       @db.Text
+  appealStatus   String?
   createdAt  DateTime          @default(now())
   resolvedAt DateTime?
   reporter   User              @relation(fields: [reporterId], references: [id], onDelete: Cascade)
   post       CommunityPost?    @relation(fields: [postId], references: [id], onDelete: SetNull)
   comment    CommunityComment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  reportedUser User?           @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([reporterId])
   @@index([postId])
   @@index([commentId])
+  @@index([reportedUserId, status])
+}
+
+/*
+ * In-app notifications. Rows are created by the API when someone replies to a
+ * comment, comments on a post, or when a moderator acts on a report. Nothing is
+ * emailed, and readAt being null is what the unread badge counts.
+ */
+model CommunityNotification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  message   String
+  postId    String?
+  commentId String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([postId])
 }
 
 model SafetyReview {

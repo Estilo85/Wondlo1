@@ -4,12 +4,33 @@ import {
   isCommunityAdmin,
   unauthorized,
 } from '@/lib/api-auth';
+import { prisma } from '@/lib/db';
 
 export async function authenticateCommunityUser(request: Request) {
   const result = await authenticateRequestUser(request);
 
   if (!result.user) {
     return { user: null, response: result.response };
+  }
+
+  /*
+   * A suspended account keeps its existing content and can still browse, but it
+   * cannot take part. Checking here means every posting surface inherits the
+   * same rule instead of each route re-reading the column.
+   */
+  const suspension = await prisma.user.findUnique({
+    where: { id: result.user.id },
+    select: { suspendedUntil: true },
+  });
+
+  if (suspension?.suspendedUntil && suspension.suspendedUntil > new Date()) {
+    return {
+      user: null,
+      response: unauthorized(
+        'Your account is suspended. Please try again later.',
+        403
+      ).response,
+    };
   }
 
   return {
