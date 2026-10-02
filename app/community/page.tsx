@@ -21,6 +21,7 @@ import {
   FiX,
   FiCheck,
   FiImage,
+  FiStar,
 } from 'react-icons/fi';
 import {
   FaWhatsapp,
@@ -95,7 +96,62 @@ type ReportTarget = {
   label: string;
 };
 
+type SafetyReviewScore = 1 | 2 | 3 | 4 | 5;
+type SafetyReviewQuestionKey =
+  | 'operatorAssessment'
+  | 'adventurePreparation'
+  | 'riskAwareness'
+  | 'safetyQuestions'
+  | 'realWorldAccuracy';
+
+type SafetyReviewAnswers = Record<
+  SafetyReviewQuestionKey,
+  SafetyReviewScore | null
+>;
+
 const COMMUNITY_POST_DRAFT_KEY = 'wondlo-community-post-draft-v1';
+
+const SAFETY_REVIEW_QUESTIONS: Array<{
+  key: SafetyReviewQuestionKey;
+  question: string;
+}> = [
+  {
+    key: 'operatorAssessment',
+    question:
+      'How much did the platform help you assess the operator’s safety before your adventure?',
+  },
+  {
+    key: 'adventurePreparation',
+    question:
+      'How much did the platform help you prepare for the safety requirements of your adventure?',
+  },
+  {
+    key: 'riskAwareness',
+    question:
+      'How much did the platform improve your awareness of the activity’s risks and safety precautions?',
+  },
+  {
+    key: 'safetyQuestions',
+    question:
+      'How much did the platform help you know which safety checks or questions to raise with the operator?',
+  },
+  {
+    key: 'realWorldAccuracy',
+    question:
+      'How closely did the safety information you used on the platform match what you experienced during the actual adventure?',
+  },
+];
+
+const SAFETY_REVIEW_SCORES: Array<{
+  value: SafetyReviewScore;
+  label: string;
+}> = [
+  { value: 1, label: 'Not at all' },
+  { value: 2, label: 'A little' },
+  { value: 3, label: 'Somewhat' },
+  { value: 4, label: 'A lot' },
+  { value: 5, label: 'Extremely' },
+];
 
 function formatPostTimestamp(timestamp: string) {
   const elapsedMinutes = Math.max(
@@ -466,6 +522,15 @@ function FilterDropdown({
   onToggle,
   onChange,
 }: FilterDropdownProps) {
+  const [optionSearch, setOptionSearch] = useState('');
+
+  const normalizedOptionSearch = optionSearch.trim().toLowerCase();
+  const visibleOptions = normalizedOptionSearch
+    ? options.filter((option) =>
+        option.toLowerCase().includes(normalizedOptionSearch)
+      )
+    : options;
+
   return (
     <div
       className="relative w-full min-w-0 xl:w-[240px] xl:flex-shrink-0"
@@ -481,7 +546,10 @@ function FilterDropdown({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-labelledby={`${id}-label ${id}`}
-        onClick={onToggle}
+        onClick={() => {
+          if (!isOpen) setOptionSearch('');
+          onToggle();
+        }}
         className={`${filterClass} cursor-pointer gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7E6BB3]/40`}
       >
         <span className="min-w-0 flex-1 truncate text-left">{value}</span>
@@ -501,7 +569,31 @@ function FilterDropdown({
           aria-labelledby={`${id}-label`}
           className="absolute left-0 top-full z-50 mt-2 max-h-[280px] w-full overflow-y-auto overscroll-contain rounded-[8px] border border-[#7E6BB3] bg-[#F6F4FE] py-1 shadow-[0_8px_24px_rgba(126,107,179,0.25)] sm:max-h-[320px]"
         >
-          {options.map((option) => {
+          <div className="sticky top-0 z-10 bg-[#F6F4FE] px-2 pb-2 pt-1">
+            <div className="relative">
+              <FiSearch
+                className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-black/45"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+
+              <label htmlFor={`${id}-option-search`} className="sr-only">
+                Search {label.toLowerCase()} options
+              </label>
+
+              <input
+                id={`${id}-option-search`}
+                type="search"
+                value={optionSearch}
+                onChange={(event) => setOptionSearch(event.target.value)}
+                placeholder={`Search ${label.toLowerCase()}...`}
+                autoComplete="off"
+                className="h-[40px] w-full rounded-[7px] border border-[#7E6BB3]/60 bg-white py-2 pl-10 pr-3 font-inter text-[14px] text-[#2B2740] outline-none placeholder:text-black/40 focus:border-[#7E6BB3] focus:ring-2 focus:ring-[#7E6BB3]/20 sm:text-[15px]"
+              />
+            </div>
+          </div>
+
+          {visibleOptions.map((option) => {
             const isSelected = option === value;
 
             return (
@@ -534,11 +626,18 @@ function FilterDropdown({
               </button>
             );
           })}
+
+          {visibleOptions.length === 0 && (
+            <p className="px-4 py-4 text-center font-inter text-[14px] text-black/50">
+              No matching options.
+            </p>
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 function PostDescription({ body }: { body: string }) {
   const measurementRef = useRef<HTMLParagraphElement>(null);
@@ -630,6 +729,25 @@ export default function CommunityPage() {
   const [userPosts, setUserPosts] = useState<CommunityPost[]>([]);
   const [communityError, setCommunityError] = useState('');
   const [communityNotice, setCommunityNotice] = useState('');
+
+  const [isSafetyReviewOpen, setIsSafetyReviewOpen] = useState(false);
+  const [safetyReviewDropdown, setSafetyReviewDropdown] =
+    useState<OpenDropdown>(null);
+  const [safetyReviewOperator, setSafetyReviewOperator] = useState('');
+  const [safetyReviewCountry, setSafetyReviewCountry] = useState('');
+  const [safetyReviewActivity, setSafetyReviewActivity] = useState('');
+  const [safetyReviewAnswers, setSafetyReviewAnswers] =
+    useState<SafetyReviewAnswers>({
+      operatorAssessment: null,
+      adventurePreparation: null,
+      riskAwareness: null,
+      safetyQuestions: null,
+      realWorldAccuracy: null,
+    });
+  const [safetyReviewExperience, setSafetyReviewExperience] = useState('');
+  const [safetyReviewImprovement, setSafetyReviewImprovement] = useState('');
+  const [isSubmittingSafetyReview, setIsSubmittingSafetyReview] =
+    useState(false);
 
   const allPosts = userPosts;
 
@@ -871,6 +989,7 @@ export default function CommunityPage() {
       ) {
         setOpenDropdown(null);
         setComposerDropdown(null);
+        setSafetyReviewDropdown(null);
       }
     };
 
@@ -878,11 +997,13 @@ export default function CommunityPage() {
       if (event.key === 'Escape') {
         setOpenDropdown(null);
         setComposerDropdown(null);
+        setSafetyReviewDropdown(null);
         setOpenPostMenuId(null);
         setSharePostId(null);
         setLinkCopied(false);
         setIsPostComposerOpen(false);
         setEditingPostId(null);
+        setIsSafetyReviewOpen(false);
         /*
          * Reset directly rather than through closeReportModal: this listener
          * is registered once, so it must only touch stable setters.
@@ -958,6 +1079,93 @@ export default function CommunityPage() {
     setSelectedActivity('All Activities');
     setSelectedLocation('All Locations');
     setOpenDropdown(null);
+  };
+
+  const resetSafetyReview = () => {
+    setSafetyReviewDropdown(null);
+    setSafetyReviewOperator('');
+    setSafetyReviewCountry('');
+    setSafetyReviewActivity('');
+    setSafetyReviewAnswers({
+      operatorAssessment: null,
+      adventurePreparation: null,
+      riskAwareness: null,
+      safetyQuestions: null,
+      realWorldAccuracy: null,
+    });
+    setSafetyReviewExperience('');
+    setSafetyReviewImprovement('');
+  };
+
+  const openSafetyReviewModal = () => {
+    setCommunityError('');
+    setCommunityNotice('');
+    setOpenDropdown(null);
+    setComposerDropdown(null);
+    resetSafetyReview();
+    setIsSafetyReviewOpen(true);
+  };
+
+  const closeSafetyReviewModal = () => {
+    if (isSubmittingSafetyReview) {
+      return;
+    }
+
+    setIsSafetyReviewOpen(false);
+    resetSafetyReview();
+  };
+
+  const submitSafetyReview = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (isSubmittingSafetyReview) {
+      return;
+    }
+
+    const hasAllSafetyAnswers = SAFETY_REVIEW_QUESTIONS.every(
+      ({ key }) => safetyReviewAnswers[key] !== null
+    );
+    const experience = safetyReviewExperience.trim();
+
+    if (
+      !safetyReviewOperator.trim() ||
+      !safetyReviewCountry ||
+      !safetyReviewActivity ||
+      !hasAllSafetyAnswers ||
+      experience.length < 20
+    ) {
+      return;
+    }
+
+    setIsSubmittingSafetyReview(true);
+
+    try {
+      await sendCommunityRequest('/api/safety-reviews', 'POST', {
+        operatorName: safetyReviewOperator.trim(),
+        country: safetyReviewCountry,
+        activity: safetyReviewActivity,
+        answers: safetyReviewAnswers,
+        experience,
+        improvement: safetyReviewImprovement.trim(),
+      });
+
+      setIsSafetyReviewOpen(false);
+      resetSafetyReview();
+      setCommunityError('');
+      setCommunityNotice(
+        'Thank you. Your safety review has been submitted.'
+      );
+    } catch (error) {
+      setCommunityError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to submit your safety review.'
+      );
+    } finally {
+      setIsSubmittingSafetyReview(false);
+    }
   };
 
   const resetPostComposer = () => {
@@ -1517,6 +1725,16 @@ export default function CommunityPage() {
     Boolean(draftActivity) &&
     !isSubmittingPost;
 
+  const canSubmitSafetyReview =
+    Boolean(safetyReviewOperator.trim()) &&
+    Boolean(safetyReviewCountry) &&
+    Boolean(safetyReviewActivity) &&
+    SAFETY_REVIEW_QUESTIONS.every(
+      ({ key }) => safetyReviewAnswers[key] !== null
+    ) &&
+    safetyReviewExperience.trim().length >= 20 &&
+    !isSubmittingSafetyReview;
+
   return (
     <div className="flex min-h-screen flex-col bg-[#FAF9FE] text-[#2B2740]">
       <ResultsNavbar />
@@ -1658,9 +1876,10 @@ export default function CommunityPage() {
             </div>
 
             {/* Leave Safety Review */}
-            <div className="mt-5 flex justify-center">
-              <Link
-                href="/community"
+            <div className="mt-5 flex flex-col items-center justify-center gap-5 lg:flex-row lg:gap-6">
+              <button
+                type="button"
+                onClick={openSafetyReviewModal}
                 className="w-full lg:w-[484px] lg:flex-shrink-0"
               >
                 <span className={secondaryButtonClass}>
@@ -1671,6 +1890,21 @@ export default function CommunityPage() {
                   />
 
                   <span>Leave Safety Review</span>
+                </span>
+              </button>
+
+              <Link
+                href="/safety-reviews"
+                className="w-full lg:w-[484px] lg:flex-shrink-0"
+              >
+                <span className={secondaryButtonClass}>
+                  <FiStar
+                    className="h-[38px] w-[38px] flex-shrink-0 text-[#2B2740] sm:h-[40px] sm:w-[40px]"
+                    strokeWidth={1.25}
+                    aria-hidden="true"
+                  />
+
+                  <span>Read Safety Reviews</span>
                 </span>
               </Link>
             </div>
@@ -2206,6 +2440,286 @@ export default function CommunityPage() {
       </main>
 
       <Footer />
+
+      {/* Safety Review */}
+      {isSafetyReviewOpen && (
+        <div
+          className="fixed inset-0 z-[115] flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeSafetyReviewModal();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="safety-review-title"
+            className="my-auto w-full max-w-[780px] rounded-[18px] border border-[#EDE7FB] bg-[#FAF9FE] p-5 shadow-[0_20px_60px_rgba(43,39,64,0.3)] sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2
+                  id="safety-review-title"
+                  className="font-poppins text-[22px] font-semibold text-[#2B2740] sm:text-[28px]"
+                >
+                  Leave a Safety Review
+                </h2>
+
+                <p className="mt-1 max-w-[650px] font-inter text-[14px] leading-relaxed text-black/60 sm:text-[15px]">
+                  Tell us how the platform affected your safety decisions and
+                  preparation, and how that information compared with your
+                  actual adventure experience.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeSafetyReviewModal}
+                disabled={isSubmittingSafetyReview}
+                aria-label="Close safety review"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[#2B2740] transition-colors hover:bg-[#EDE7FB] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FiX
+                  className="h-6 w-6"
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+
+            <form onSubmit={submitSafetyReview} className="mt-6 space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_240px_240px]">
+                <div>
+                  <label
+                    htmlFor="safety-review-operator"
+                    className="mb-2 block font-inter text-[14px] font-semibold text-[#2B2740]"
+                  >
+                    Operator
+                  </label>
+                  <input
+                    id="safety-review-operator"
+                    type="text"
+                    required
+                    value={safetyReviewOperator}
+                    onChange={(event) =>
+                      setSafetyReviewOperator(event.target.value)
+                    }
+                    placeholder="Operator name"
+                    className="h-[46px] w-full rounded-[8px] border border-[#7E6BB3] bg-[#FAF9FE] px-3 font-inter text-[14px] text-[#2B2740] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-[#7E6BB3]/20"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="safety-review-country"
+                    className="mb-2 block font-inter text-[14px] font-semibold text-[#2B2740]"
+                  >
+                    Country
+                  </label>
+
+                  <FilterDropdown
+                    id="safety-review-country"
+                    label="Country"
+                    options={COUNTRIES.filter(
+                      (country) => country !== 'All Locations'
+                    )}
+                    value={safetyReviewCountry || 'Select country'}
+                    isOpen={safetyReviewDropdown === 'location'}
+                    onToggle={() => {
+                      setOpenDropdown(null);
+                      setComposerDropdown(null);
+                      setSafetyReviewDropdown((current) =>
+                        current === 'location' ? null : 'location'
+                      );
+                    }}
+                    onChange={(country) => {
+                      setSafetyReviewCountry(country);
+                      setSafetyReviewDropdown(null);
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="safety-review-activity"
+                    className="mb-2 block font-inter text-[14px] font-semibold text-[#2B2740]"
+                  >
+                    Activity
+                  </label>
+
+                  <FilterDropdown
+                    id="safety-review-activity"
+                    label="Activity"
+                    options={ACTIVITIES.filter(
+                      (activity) => activity !== 'All Activities'
+                    )}
+                    value={safetyReviewActivity || 'Select activity'}
+                    isOpen={safetyReviewDropdown === 'activity'}
+                    onToggle={() => {
+                      setOpenDropdown(null);
+                      setComposerDropdown(null);
+                      setSafetyReviewDropdown((current) =>
+                        current === 'activity' ? null : 'activity'
+                      );
+                    }}
+                    onChange={(activity) => {
+                      setSafetyReviewActivity(activity);
+                      setSafetyReviewDropdown(null);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                {SAFETY_REVIEW_QUESTIONS.map(({ key, question }, index) => {
+                  const selectedScore = safetyReviewAnswers[key];
+                  const selectedScoreLabel =
+                    SAFETY_REVIEW_SCORES.find(
+                      ({ value }) => value === selectedScore
+                    )?.label ?? 'Select a rating';
+
+                  return (
+                    <fieldset
+                      key={key}
+                      className="rounded-[10px] border border-[#7E6BB3]/25 bg-[#F6F4FE] p-4"
+                    >
+                      <legend className="sr-only">
+                        {index + 1}. {question}
+                      </legend>
+
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+                        <p className="min-w-0 flex-1 font-inter text-[14px] font-semibold leading-relaxed text-[#2B2740] sm:text-[15px]">
+                          {index + 1}. {question}
+                        </p>
+
+                        <div className="flex flex-shrink-0 flex-col items-start gap-1 sm:items-end">
+                          <div
+                            className="flex items-center gap-1"
+                            role="radiogroup"
+                            aria-label={`Rating for question ${index + 1}`}
+                          >
+                            {SAFETY_REVIEW_SCORES.map(({ value, label }) => {
+                              const isSelected =
+                                selectedScore !== null &&
+                                value <= selectedScore;
+
+                              return (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={selectedScore === value}
+                                  aria-label={`${value} star${
+                                    value === 1 ? '' : 's'
+                                  }: ${label}`}
+                                  title={`${value} star${
+                                    value === 1 ? '' : 's'
+                                  } — ${label}`}
+                                  onClick={() =>
+                                    setSafetyReviewAnswers((current) => ({
+                                      ...current,
+                                      [key]: value,
+                                    }))
+                                  }
+                                  className="rounded-[5px] p-0.5 text-[#7E6BB3] transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7E6BB3]/35"
+                                >
+                                  <FiStar
+                                    className="h-7 w-7 sm:h-8 sm:w-8"
+                                    fill={isSelected ? 'currentColor' : 'none'}
+                                    strokeWidth={1.7}
+                                    aria-hidden="true"
+                                  />
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <span className="font-inter text-[12px] text-black/50">
+                            {selectedScore
+                              ? `${selectedScore}/5 · ${selectedScoreLabel}`
+                              : selectedScoreLabel}
+                          </span>
+                        </div>
+                      </div>
+                    </fieldset>
+                  );
+                })}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="safety-review-experience"
+                  className="mb-2 block font-inter text-[14px] font-semibold text-[#2B2740]"
+                >
+                  What happened during the actual adventure that confirmed,
+                  contradicted, or added to the safety information you used?
+                </label>
+
+                <textarea
+                  id="safety-review-experience"
+                  rows={4}
+                  required
+                  minLength={20}
+                  maxLength={1500}
+                  value={safetyReviewExperience}
+                  onChange={(event) =>
+                    setSafetyReviewExperience(event.target.value)
+                  }
+                  placeholder="Describe the safety briefing, equipment, staff behaviour, emergency readiness, conditions, or anything else you actually observed."
+                  className="w-full resize-y rounded-[8px] border border-[#7E6BB3] bg-[#FAF9FE] px-4 py-3 font-inter text-[14px] text-[#2B2740] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-[#7E6BB3]/20 sm:text-[16px]"
+                />
+                <p className="mt-1 font-inter text-[12px] text-black/45">
+                  Minimum 20 characters.
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="safety-review-improvement"
+                  className="mb-2 block font-inter text-[14px] font-semibold text-[#2B2740]"
+                >
+                  What safety information or feature would have helped you more?{' '}
+                  <span className="font-normal text-black/45">(optional)</span>
+                </label>
+
+                <textarea
+                  id="safety-review-improvement"
+                  rows={3}
+                  maxLength={1200}
+                  value={safetyReviewImprovement}
+                  onChange={(event) =>
+                    setSafetyReviewImprovement(event.target.value)
+                  }
+                  placeholder="Tell us what would make the platform more useful for safer adventure decisions."
+                  className="w-full resize-y rounded-[8px] border border-[#7E6BB3] bg-[#FAF9FE] px-4 py-3 font-inter text-[14px] text-[#2B2740] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-[#7E6BB3]/20 sm:text-[16px]"
+                />
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-[#7E6BB3]/20 pt-5 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeSafetyReviewModal}
+                  disabled={isSubmittingSafetyReview}
+                  className="h-[48px] rounded-[8px] border border-[#2B2740] bg-[#F6F4FE] px-6 font-inter text-[15px] font-semibold text-[#2B2740] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={!canSubmitSafetyReview}
+                  className="h-[48px] rounded-[8px] bg-[linear-gradient(90deg,_#7E6BB3_25%,_#2B2740_100%)] px-7 font-inter text-[15px] font-semibold text-white shadow-[0_3px_5px_rgba(0,0,0,0.2)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSubmittingSafetyReview
+                    ? 'Submitting...'
+                    : 'Submit Safety Review'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Share your Adventure Composer */}
       {isPostComposerOpen && (

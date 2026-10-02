@@ -28,6 +28,7 @@ model User {
   communityLikes     CommunityLike[]
   communityComments  CommunityComment[]
   communityReports   CommunityReport[]
+  safetyReviews      SafetyReview[]
 }
 
 model SavedCard {
@@ -149,4 +150,24 @@ model CommunityReport {
   @@index([reporterId])
   @@index([postId])
   @@index([commentId])
+}
+
+model SafetyReview {
+  id                   String   @id @default(uuid())
+  userId               String
+  operatorName         String
+  country              String
+  activity             String
+  operatorAssessment   Int
+  adventurePreparation Int
+  riskAwareness        Int
+  safetyQuestions      Int
+  realWorldAccuracy    Int
+  experience           String   @db.Text
+  improvement          String?  @db.Text
+  createdAt            DateTime @default(now())
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }

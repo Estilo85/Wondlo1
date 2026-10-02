@@ -101,7 +101,7 @@ export default function ProfileMenuButton({
         aria-label={profileOpen ? 'Close profile menu' : 'Open profile menu'}
         aria-expanded={profileOpen}
         onClick={() => setProfileOpen((open) => !open)}
-        className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border ${TONES[tone]}`}
+        className={`relative flex h-9 w-9 items-center justify-center overflow-visible rounded-full border ${TONES[tone]}`}
       >
         {avatarUrl ? (
           <Image
@@ -109,7 +109,7 @@ export default function ProfileMenuButton({
             alt="Your profile picture"
             fill
             sizes="36px"
-            className="object-cover"
+            className="rounded-full object-cover"
             unoptimized
           />
         ) : (

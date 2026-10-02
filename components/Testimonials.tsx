@@ -1,31 +1,65 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { FiChevronRight } from 'react-icons/fi';
 
 interface Testimonial {
-  id: number;
+  id: string;
   quote: string;
   name: string;
   location: string;
-  avatar: string;
+  avatar: string | null;
   rating: number;
 }
 
-const testimonials: Testimonial[] = [];
-
 export default function Testimonials() {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetch('/api/safety-reviews', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Unable to load safety reviews.');
+        return (await response.json()) as { reviews: Testimonial[] };
+      })
+      .then((data) => {
+        if (isActive) setTestimonials(data.reviews);
+      })
+      .catch(() => {
+        if (isActive) setHasError(true);
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const visibleTestimonials = Array.from(
+    { length: Math.min(3, testimonials.length) },
+    (_, index) => testimonials[index]
+  );
+
   return (
-    <section className="w-full max-w-[1440px] mx-auto mb-8 bg-[#FFFFFF]">
-      {/* Section Background */}
+    <section
+      id="safety-reviews"
+      className="mx-auto mb-8 w-full max-w-[1440px] scroll-mt-8 bg-white"
+    >
       <div
-        className="w-full rounded-3xl p-8 sm:p-12 relative"
+        className="w-full rounded-[20px] px-4 py-4 sm:px-8 sm:py-5"
         style={{
           background:
             'linear-gradient(90deg, rgba(237,231,251,0.8) 0%, rgba(199,181,245,0.8) 100%)',
         }}
       >
-        {/* Section Title */}
-        <div className="text-center mb-8">
+        <div className="mb-3 text-center">
           <h2
             className="font-poppins font-bold text-[#2B2740]"
             style={{
@@ -35,99 +69,102 @@ export default function Testimonials() {
           >
             What our users say
           </h2>
-
-          <p
-            className="font-inter text-[14px] font-medium text-[#7E6BB3] mt-5"
-            style={{
-              lineHeight: '1.5',
-            }}
-          >
+          <p className="mt-1 font-inter text-[14px] font-medium leading-[1.5] text-[#7E6BB3]">
             Hear directly from other travellers from across the globe.
           </p>
         </div>
 
-        {/* Content Container */}
-        {testimonials.length > 0 ? (
-          <div className="flex items-center gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-              {testimonials.map((item) => (
-                <div
+        {isLoading ? (
+          <div className="rounded-xl bg-white/80 px-4 py-8 text-center font-inter text-sm text-[#7E6BB3]">
+            Loading safety reviews...
+          </div>
+        ) : visibleTestimonials.length > 0 ? (
+          <div className="flex items-center gap-3 sm:gap-8">
+            <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 md:grid-cols-3 sm:gap-5">
+              {visibleTestimonials.map((item) => (
+                <article
                   key={item.id}
-                  className="bg-white rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4 border border-[#F6F4FE]"
+                  className="flex min-h-[150px] flex-col justify-between rounded-[12px] border border-[#F6F4FE] bg-white px-3 py-2.5 shadow-xs sm:px-4"
                 >
-                  <div className="space-y-1">
-                    <span className="font-serif text-3xl leading-none text-[#C7B5F5] block">
+                  <div className="min-h-0">
+                    <span className="block h-5 font-serif text-[28px] leading-[1] text-[#9A83D3]">
                       “
                     </span>
-
-                    <p
-                      className="font-inter text-[15px] text-[#7E6BB3] leading-relaxed min-h-[52px]"
-                      style={{
-                        fontWeight: 600,
-                      }}
-                    >
+                    <p className="line-clamp-3 font-inter text-[13px] font-normal leading-[1.3] text-[#686868]">
                       {item.quote}
                     </p>
                   </div>
 
-                  <div className="flex items-end justify-between pt-3 border-t border-[#F6F4FE]">
-                    <div className="flex items-center space-x-2.5">
-                      <Image
-                        src={item.avatar}
-                        alt={item.name}
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="w-8 h-8 rounded-full object-cover border border-[#EDE7FB]"
-                      />
+                  <div className="flex items-end justify-between gap-2 pt-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {item.avatar ? (
+                        <Image
+                          src={item.avatar}
+                          alt=""
+                          width={40}
+                          height={40}
+                          unoptimized
+                          className="h-10 w-10 flex-shrink-0 rounded-full border border-[#EDE7FB] object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[#EDE7FB] bg-[#EDE7FB] font-poppins text-sm font-semibold text-[#7E6BB3]">
+                          {item.name.slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
 
-                      <div>
-                        <h4 className="font-poppins font-bold text-[15px] text-[#2B2740] leading-tight">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-poppins text-[12px] font-semibold leading-tight text-[#2B2740]">
                           {item.name}
-                        </h4>
-
-                        <p className="font-inter text-[13px] text-[#7E6BB3]">
+                        </h3>
+                        <p className="truncate font-inter text-[10px] leading-tight text-[#686868]">
                           {item.location}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex space-x-0.5 text-[#FBBF24]">
-                      {[...Array(item.rating)].map((_, i) => (
-                        <span key={i} className="text-lg">
+                    <div
+                      className="flex flex-shrink-0 gap-px text-[18px] leading-none"
+                      aria-label={`${item.rating} out of 5 stars`}
+                    >
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          className={
+                            star <= item.rating
+                              ? 'text-[#FFC400]'
+                              : 'text-[#D8D8D8]'
+                          }
+                          aria-hidden="true"
+                        >
                           ★
                         </span>
                       ))}
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
 
-            <button
-              type="button"
-              aria-label="Next testimonials"
-              className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-white/80 hover:bg-white text-[#7E6BB3] shadow-xs border border-white/60 transition shrink-0"
+            <Link
+              href="/safety-reviews"
+              aria-label="Read all safety reviews"
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-white bg-transparent text-white transition hover:bg-white/20 sm:h-[52px] sm:w-[52px]"
             >
-              <svg
-                className="w-5 h-5 fill-current"
-                viewBox="0 0 24 24"
-              >
-                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-              </svg>
-            </button>
+              <FiChevronRight className="h-7 w-7" strokeWidth={1.2} />
+            </Link>
           </div>
         ) : (
-          /* Empty State */
-          <div className="bg-white/80 backdrop-blur-xs rounded-2xl p-8 border border-dashed border-[#C7B5F5] text-center max-w-lg mx-auto space-y-2">
-            <p className="font-poppins font-semibold text-[14px] text-[#2B2740]">
-              No reviews submitted yet
+          <div className="rounded-[12px] border border-white/80 bg-white/80 px-4 py-6 text-center">
+            <p className="font-poppins text-[14px] font-semibold text-[#2B2740]">
+              {hasError
+                ? 'Safety reviews are temporarily unavailable.'
+                : 'No reviews submitted yet'}
             </p>
-
-            <p className="font-inter text-[14px] font-medium text-[#7E6BB3]">
-              Be the first traveler to share your adventure safety experiences
-              with our community!
-            </p>
+            {!hasError && (
+              <p className="mt-1 font-inter text-[13px] text-[#7E6BB3]">
+                Be the first traveller to share an adventure safety experience.
+              </p>
+            )}
           </div>
         )}
       </div>
