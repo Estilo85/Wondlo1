@@ -992,7 +992,12 @@ export default function CommunityPage() {
     });
 
     if (!response.ok) {
-      throw new Error('Unable to sync community posts. Please try again.');
+      let message = 'Unable to load community posts. Please try again.';
+      try {
+        const err = await response.json();
+        if (err?.error) message = err.error;
+      } catch {}
+      throw new Error(message);
     }
 
     const data = (await response.json()) as {
