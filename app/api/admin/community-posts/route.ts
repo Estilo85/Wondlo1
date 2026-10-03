@@ -135,6 +135,9 @@ export async function PATCH(request: Request): Promise<NextResponse> {
         { status: 400 }
       );
     }
+    await prisma.communityPost.update({ where: { id }, data });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Community moderation update error:', error);
     return NextResponse.json(

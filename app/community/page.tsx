@@ -1171,7 +1171,18 @@ export default function CommunityPage() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void refresh();
+        void (async () => {
+          try {
+            await loadCommunityPosts();
+            if (isActive) setCommunityError('');
+          } catch {
+            if (isActive) {
+              setCommunityError(
+                'Unable to sync community posts. Please try again.'
+              );
+            }
+          }
+        })();
         void loadUnreadNotifications();
       }
     };
@@ -1180,7 +1191,13 @@ export default function CommunityPage() {
 
     const unsubscribe = auth
       ? onAuthStateChanged(auth, (user) => {
-          void refresh();
+          void (async () => {
+            try {
+              await loadCommunityPosts();
+            } catch {
+              /* ignore */
+            }
+          })();
           void loadCommunityStats();
           void loadUnreadNotifications();
 
