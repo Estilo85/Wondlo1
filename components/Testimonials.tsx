@@ -22,23 +22,51 @@ export default function Testimonials() {
   useEffect(() => {
     let isActive = true;
 
-    fetch('/api/safety-reviews', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Unable to load safety reviews.');
-        return (await response.json()) as { reviews: Testimonial[] };
-      })
-      .then((data) => {
-        if (isActive) setTestimonials(data.reviews);
-      })
-      .catch(() => {
-        if (isActive) setHasError(true);
-      })
-      .finally(() => {
-        if (isActive) setIsLoading(false);
-      });
+    const loadTestimonials = () => {
+      fetch('/api/safety-reviews', { cache: 'no-store' })
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Unable to load safety reviews.');
+          return (await response.json()) as { reviews: Testimonial[] };
+        })
+        .then((data) => {
+          if (isActive) {
+            setTestimonials(data.reviews);
+            setHasError(false);
+          }
+        })
+        .catch(() => {
+          if (isActive) setHasError(true);
+        })
+        .finally(() => {
+          if (isActive) setIsLoading(false);
+        });
+    };
+
+    loadTestimonials();
+
+    /*
+     * A review is submitted from another page, so by the time the traveller
+     * arrives here the copy they are looking at is already stale. Refetching
+     * whenever the tab comes back to the front is what makes a review they
+     * just wrote show up without a manual reload.
+     */
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadTestimonials();
+      }
+    };
+
+    const handleFocus = () => {
+      loadTestimonials();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       isActive = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 

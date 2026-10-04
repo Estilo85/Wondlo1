@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { authenticateCommunityUser } from '@/lib/community-api';
+import { createCommunityNotification } from '@/lib/community-notifications';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +17,33 @@ function readCommentText(body: Record<string, unknown>) {
   return text;
 }
 
+function toCommentResponse(
+  comment: {
+    id: string;
+    text: string;
+    createdAt: Date;
+    editedAt: Date | null;
+    userId: string;
+    user: { id: string; name: string; avatarUrl: string | null };
+  },
+  viewerId: string
+) {
+  return {
+    id: comment.id,
+    text: comment.text,
+    author: comment.user.name,
+    authorId: comment.user.id,
+    authorAvatarUrl: comment.user.avatarUrl,
+    ownedByMe: comment.userId === viewerId,
+    createdAt: comment.createdAt.toISOString(),
+    editedAt: comment.editedAt?.toISOString() ?? null,
+  };
+}
+
+const commentInclude = {
+  user: { select: { id: true, name: true, avatarUrl: true } },
+} as const;
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ postId: string }> }
@@ -25,21 +53,53 @@ export async function POST(
 
   try {
     const { postId } = await params;
-    const body = (await request.json()) as { text?: unknown };
-    const text = typeof body.text === 'string' ? body.text.trim() : '';
-    if (!text || text.length > MAX_COMMENT_LENGTH) {
+    const body = (await request.json()) as Record<string, unknown>;
+    const text = readCommentText(body);
+    const parentId = typeof body.parentId === 'string' ? body.parentId : '';
+
+    if (text === null) {
       return NextResponse.json(
         { error: 'Enter a comment up to 5,000 characters.' },
         { status: 400 }
       );
     }
 
-    const postExists = await prisma.communityPost.findUnique({
+    const post = await prisma.communityPost.findUnique({
       where: { id: postId },
-      select: { id: true },
+      select: { id: true, title: true, userId: true },
     });
-    if (!postExists) {
+    if (!post) {
       return NextResponse.json({ error: 'Post not found.' }, { status: 404 });
+    }
+
+    let parentComment:
+      | { id: string; userId: string; parentId: string | null; postId: string }
+      | null = null;
+
+    if (parentId) {
+      parentComment = await prisma.communityComment.findUnique({
+        where: { id: parentId },
+        select: { id: true, userId: true, parentId: true, postId: true },
+      });
+
+      if (!parentComment || parentComment.postId !== postId) {
+        return NextResponse.json(
+          { error: 'That comment could not be found.' },
+          { status: 404 }
+        );
+      }
+
+      /*
+       * Threads stay two levels deep. Replying to a reply attaches to the root
+       * of that thread instead of opening a third level, so every reply always
+       * has somewhere to hang and a parent is never left orphaned.
+       */
+      if (parentComment.parentId) {
+        parentComment = await prisma.communityComment.findUnique({
+          where: { id: parentComment.parentId },
+          select: { id: true, userId: true, parentId: true, postId: true },
+        });
+      }
     }
 
     const comment = await prisma.communityComment.create({
@@ -47,19 +107,35 @@ export async function POST(
         postId,
         userId: authentication.user.id,
         text,
+        parentId: parentComment?.id ?? null,
       },
-      include: { user: { select: { name: true, avatarUrl: true } } },
+      include: commentInclude,
     });
+
     const comments = await prisma.communityComment.count({ where: { postId } });
+
+    /*
+     * A reply goes to whoever wrote the comment being answered, otherwise the
+     * post author hears about it. Neither is told about their own comment.
+     */
+    const recipientId = parentComment?.userId ?? post.userId;
+
+    if (recipientId !== authentication.user.id) {
+      await createCommunityNotification({
+        userId: recipientId,
+        type: parentComment ? 'comment_reply' : 'comment_on_post',
+        message: parentComment
+          ? 'replied to a comment on your post.'
+          : `commented on your post "${post.title}".`,
+        postId,
+        commentId: comment.id,
+      });
+    }
 
     return NextResponse.json(
       {
-        comment: {
-          id: comment.id,
-          text: comment.text,
-          author: comment.user.name,
-          authorAvatarUrl: comment.user.avatarUrl,
-        },
+        comment: toCommentResponse(comment, authentication.user.id),
+        parentId: parentComment?.id ?? null,
         comments,
       },
       { status: 201 }
@@ -99,11 +175,12 @@ export async function PATCH(
 
     /*
      * Scoping the update to the author means someone cannot edit a comment
-     * they do not own by guessing its id.
+     * they do not own by guessing its id. editedAt is what the UI shows as an
+     * "edited" badge, so it is written on every successful save.
      */
     const result = await prisma.communityComment.updateMany({
       where: { id: commentId, postId, userId: authentication.user.id },
-      data: { text },
+      data: { text, editedAt: new Date() },
     });
 
     if (result.count === 0) {
@@ -112,18 +189,12 @@ export async function PATCH(
 
     const comment = await prisma.communityComment.findUnique({
       where: { id: commentId },
-      include: { user: { select: { name: true, avatarUrl: true } } },
+      include: commentInclude,
     });
 
     return NextResponse.json({
       comment: comment
-        ? {
-            id: comment.id,
-            text: comment.text,
-            author: comment.user.name,
-            authorAvatarUrl: comment.user.avatarUrl,
-            ownedByMe: true,
-          }
+        ? toCommentResponse(comment, authentication.user.id)
         : null,
     });
   } catch (error) {
@@ -151,6 +222,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Comment not found.' }, { status: 400 });
     }
 
+    /*
+     * Deleting a top level comment takes its replies with it through the
+     * onDelete cascade on parentId, which is why no reply count is subtracted
+     * by hand here.
+     */
     const result = await prisma.communityComment.deleteMany({
       where: { id: commentId, postId, userId: authentication.user.id },
     });

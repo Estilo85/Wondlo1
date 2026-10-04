@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { authenticateCommunityUser } from '@/lib/community-api';
 import {
@@ -8,6 +9,18 @@ import {
 
 export const runtime = 'nodejs';
 
+type ReportKind = 'post' | 'comment' | 'user';
+
+/*
+ * One open report per person per target. The key is enforced by a unique
+ * constraint on CommunityReport.openKey, so the check below is a courtesy that
+ * produces a readable message rather than the thing standing between a double
+ * click and a duplicate queue entry.
+ */
+function readOpenKey(reporterId: string, kind: ReportKind, targetId: string) {
+  return `${reporterId}:${kind}:${targetId}`;
+}
+
 export async function POST(request: Request) {
   const authentication = await authenticateCommunityUser(request);
   if (!authentication.user) return authentication.response;
@@ -16,14 +29,17 @@ export async function POST(request: Request) {
     const body = (await request.json()) as Record<string, unknown>;
     const postId = typeof body.postId === 'string' ? body.postId : '';
     const commentId = typeof body.commentId === 'string' ? body.commentId : '';
+    const userId = typeof body.userId === 'string' ? body.userId : '';
 
     /*
-     * A report points at exactly one thing. Accepting both or neither would
-     * leave rows nothing can act on, so the pair is validated up front.
+     * A report points at exactly one thing. Accepting more than one, or none,
+     * would leave rows nothing can act on, so the set is validated up front.
      */
-    if ((postId && commentId) || (!postId && !commentId)) {
+    const targets = [postId, commentId, userId].filter(Boolean);
+
+    if (targets.length !== 1) {
       return NextResponse.json(
-        { error: 'Choose a post or a comment to report.' },
+        { error: 'Choose a post, comment or member to report.' },
         { status: 400 }
       );
     }
@@ -62,82 +78,92 @@ export async function POST(request: Request) {
         );
       }
 
-      /*
-       * One open report per person per post is enough to flag something. The
-       * unique constraint backs this up, so a double click cannot queue the
-       * same complaint twice.
-       */
-      const existing = await prisma.communityReport.findFirst({
-        where: {
-          postId,
-          reporterId: authentication.user.id,
-          status: 'open',
-        },
-        select: { id: true },
-      });
-
-      if (existing) {
-        return NextResponse.json(
-          { error: 'You have already reported this post.' },
-          { status: 409 }
-        );
-      }
-
       const report = await prisma.communityReport.create({
         data: {
           reporterId: authentication.user.id,
           postId,
           reason: body.reason,
           details: details || null,
+          openKey: readOpenKey(authentication.user.id, 'post', postId),
         },
       });
 
       return NextResponse.json({ id: report.id }, { status: 201 });
     }
 
-    const comment = await prisma.communityComment.findUnique({
-      where: { id: commentId },
-      select: { id: true, userId: true },
-    });
+    if (commentId) {
+      const comment = await prisma.communityComment.findUnique({
+        where: { id: commentId },
+        select: { id: true, userId: true },
+      });
 
-    if (!comment) {
-      return NextResponse.json({ error: 'Comment not found.' }, { status: 404 });
+      if (!comment) {
+        return NextResponse.json({ error: 'Comment not found.' }, { status: 404 });
+      }
+
+      if (comment.userId === authentication.user.id) {
+        return NextResponse.json(
+          { error: 'You cannot report your own comment.' },
+          { status: 400 }
+        );
+      }
+
+      const report = await prisma.communityReport.create({
+        data: {
+          reporterId: authentication.user.id,
+          commentId,
+          reason: body.reason,
+          details: details || null,
+          openKey: readOpenKey(authentication.user.id, 'comment', commentId),
+        },
+      });
+
+      return NextResponse.json({ id: report.id }, { status: 201 });
     }
 
-    if (comment.userId === authentication.user.id) {
-      return NextResponse.json(
-        { error: 'You cannot report your own comment.' },
-        { status: 400 }
-      );
-    }
-
-    const existingCommentReport = await prisma.communityReport.findFirst({
-      where: {
-        commentId,
-        reporterId: authentication.user.id,
-        status: 'open',
-      },
+    const member = await prisma.user.findUnique({
+      where: { id: userId },
       select: { id: true },
     });
 
-    if (existingCommentReport) {
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
+    }
+
+    if (member.id === authentication.user.id) {
       return NextResponse.json(
-        { error: 'You have already reported this comment.' },
-        { status: 409 }
+        { error: 'You cannot report yourself.' },
+        { status: 400 }
       );
     }
 
     const report = await prisma.communityReport.create({
       data: {
         reporterId: authentication.user.id,
-        commentId,
+        reportedUserId: member.id,
         reason: body.reason,
         details: details || null,
+        openKey: readOpenKey(authentication.user.id, 'user', member.id),
       },
     });
 
     return NextResponse.json({ id: report.id }, { status: 201 });
   } catch (error) {
+    /*
+     * The unique constraint on openKey is the real guard against a duplicated
+     * report. Catching it here turns a 500 into the same 409 the pre-check
+     * would have produced, whichever request loses the race.
+     */
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      return NextResponse.json(
+        { error: 'You have already reported this.' },
+        { status: 409 }
+      );
+    }
+
     console.error('Community report error:', error);
     return NextResponse.json(
       { error: 'Unable to send your report. Please try again.' },
