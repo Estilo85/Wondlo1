@@ -88,6 +88,7 @@ type FilterDropdownProps = {
   label: string;
   options: readonly string[];
   value: string;
+  desktopWidthClassName?: string;
   isOpen: boolean;
   onToggle: () => void;
   onChange: (value: string) => void;
@@ -583,6 +584,7 @@ function FilterDropdown({
   label,
   options,
   value,
+  desktopWidthClassName = 'xl:w-[240px]',
   isOpen,
   onToggle,
   onChange,
@@ -598,7 +600,7 @@ function FilterDropdown({
 
   return (
     <div
-      className="relative w-full min-w-0 xl:w-[240px] xl:flex-shrink-0"
+      className={`relative w-full min-w-0 xl:flex-shrink-0 ${desktopWidthClassName}`}
       data-community-dropdown="true"
     >
       <span id={`${id}-label`} className="sr-only">
@@ -2323,7 +2325,7 @@ export default function CommunityPage() {
             {/* Search Section */}
             <div className="relative z-30 mt-10 w-full rounded-[10px] border-[1.5px] border-[#7E6BB3] bg-transparent px-5 py-5 lg:mt-[30px] lg:px-[55px]">
               <div className="flex w-full flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_180px_180px] md:items-center md:gap-4 xl:flex xl:flex-row xl:justify-between xl:gap-8">
-                <div className="relative w-full min-w-0 xl:w-[580px] xl:flex-shrink-0">
+                <div className="relative w-full min-w-0 xl:w-[580px]">
                   <FiSearch
                     className="pointer-events-none absolute left-4 top-1/2 h-[24px] w-[24px] -translate-y-1/2 text-black/50"
                     strokeWidth={1.8}
@@ -2349,6 +2351,7 @@ export default function CommunityPage() {
                   label="Filter by activity"
                   options={ACTIVITIES}
                   value={selectedActivity}
+                  desktopWidthClassName="xl:w-[190px]"
                   isOpen={openDropdown === 'activity'}
                   onToggle={() =>
                     setOpenDropdown((current) =>
@@ -2366,6 +2369,7 @@ export default function CommunityPage() {
                   label="Filter by location"
                   options={COUNTRIES}
                   value={selectedLocation}
+                  desktopWidthClassName="xl:w-[190px]"
                   isOpen={openDropdown === 'location'}
                   onToggle={() =>
                     setOpenDropdown((current) =>
@@ -2391,6 +2395,7 @@ export default function CommunityPage() {
                     SORT_OPTIONS.find((option) => option.value === sortBy)
                       ?.label ?? 'Top'
                   }
+                  desktopWidthClassName="xl:w-[190px]"
                   isOpen={openDropdown === 'sort'}
                   onToggle={() =>
                     setOpenDropdown((current) =>
