@@ -46,23 +46,50 @@ export default function SafetyReviewsPage() {
   useEffect(() => {
     let isActive = true;
 
-    fetch('/api/safety-reviews', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Unable to load safety reviews.');
-        return (await response.json()) as { reviews: SafetyReview[] };
-      })
-      .then((data) => {
-        if (isActive) setReviews(data.reviews);
-      })
-      .catch(() => {
-        if (isActive) setHasError(true);
-      })
-      .finally(() => {
-        if (isActive) setIsLoading(false);
-      });
+    const loadReviews = () => {
+      fetch('/api/safety-reviews', { cache: 'no-store' })
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Unable to load safety reviews.');
+          return (await response.json()) as { reviews: SafetyReview[] };
+        })
+        .then((data) => {
+          if (isActive) {
+            setReviews(data.reviews);
+            setHasError(false);
+          }
+        })
+        .catch(() => {
+          if (isActive) setHasError(true);
+        })
+        .finally(() => {
+          if (isActive) setIsLoading(false);
+        });
+    };
+
+    loadReviews();
+
+    /*
+     * Reviews are written from the community page, so returning to this tab has
+     * to re-read them. Without this a traveller who just submitted a review
+     * lands here and sees the list as it was before they pressed submit.
+     */
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadReviews();
+      }
+    };
+
+    const handleFocus = () => {
+      loadReviews();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       isActive = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
