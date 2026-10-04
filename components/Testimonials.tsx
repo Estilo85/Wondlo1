@@ -174,7 +174,7 @@ export default function Testimonials() {
             </div>
 
             <Link
-              href="/safety-reviews"
+              href="/safety-reviews?returnTo=%2F%23safety-reviews"
               aria-label="Read all safety reviews"
               className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-white bg-transparent text-white transition hover:bg-white/20 sm:h-[52px] sm:w-[52px]"
             >

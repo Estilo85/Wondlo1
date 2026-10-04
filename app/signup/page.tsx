@@ -66,7 +66,7 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FAF9FE]">
-      <Navbar />
+      <Navbar backgroundColor="#FAF9FE" />
 
       <div className="flex flex-1 items-center justify-center px-4 pb-12 pt-24 sm:px-6 md:pt-28">
         <div className="w-full max-w-md">

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/firebase-client';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
@@ -29,7 +30,8 @@ import Footer from '@/components/Footer';
  * search screen means a cold visitor never sees an empty page while Firebase
  * resolves, which is the failure the dashboard page suffers from.
  */
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
   const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
@@ -44,7 +46,9 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  if (!isSignedIn) {
+  const showHomePage = searchParams.get('signedOut') === '1';
+
+  if (!isSignedIn && !showHomePage) {
     return (
       <div className="flex min-h-screen flex-col bg-[#FAF9FE]">
         <ResultsNavbar />
@@ -87,5 +91,28 @@ export default function Home() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col bg-[#FAF9FE]">
+          <ResultsNavbar />
+          <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-8 md:px-8">
+            <HeroSection
+              showVisuals={false}
+              dashboardLayout
+              dashboardMessage="Search an adventure provider to see its safety profile, risk breakdown and reports from other travellers."
+              searchesRemaining={3}
+            />
+          </main>
+          <Footer />
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }

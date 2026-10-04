@@ -145,36 +145,36 @@ export default function PaymentPageSection({
               boxShadow: '0 8px 20px rgba(43, 39, 64, 0.06)',
             }}
           >
-            <div className="flex items-center gap-4 sm:gap-6">
-              <div
-                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#7E6BB3]"
-              >
-                <svg
-                  className="h-5 w-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 10h18M7 15h2m4 0h2m-8 4h12a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
+            <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+              <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#7E6BB3]">
+                  <svg
+                    className="h-5 w-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 10h18M7 15h2m4 0h2m-8 4h12a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-[#7E6BB3]">
+                    Billing
+                  </p>
+
+                  <p className="text-sm font-bold text-[#2B2740]">
+                    You&apos;re on {billing.label}
+                  </p>
+                </div>
               </div>
 
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-[#7E6BB3]">
-                  Billing
-                </p>
-
-                <p className="text-sm font-bold text-[#2B2740]">
-                  You&apos;re on {billing.label}
-                </p>
-              </div>
-
-              <div className="w-full max-w-[220px] sm:w-[190px] flex-shrink-0">
+              <div className="w-full max-w-[220px] flex-shrink-0 sm:ml-auto sm:w-[190px]">
                 <div className="mb-1 flex justify-between font-inter text-[11px] text-[#4A4560]">
                   <span>
                     {billing.used} of {billing.allowance} searches used
@@ -191,11 +191,11 @@ export default function PaymentPageSection({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
               {billing.limited && billing.plan === 'free_trial' && (
                 <Link
                   href="/checkout?plan=pay-as-you-go"
-                  className="h-9 rounded-lg bg-[#3D8A1E] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#32751A]"
+                  className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg bg-[#3D8A1E] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#32751A]"
                 >
                   Top up searches
                 </Link>
@@ -203,7 +203,7 @@ export default function PaymentPageSection({
 
               <Link
                 href="/billing"
-                className="group inline-flex h-9 items-center gap-2 rounded-full bg-gradient-to-r from-[#7E6BB3] to-[#9A87CE] px-4 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(126,107,179,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(126,107,179,0.45)]"
+                className="group inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-gradient-to-r from-[#7E6BB3] to-[#9A87CE] px-4 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(126,107,179,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(126,107,179,0.45)] sm:w-auto"
               >
                 <svg
                   className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90"

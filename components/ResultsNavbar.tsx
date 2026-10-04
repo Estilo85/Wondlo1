@@ -21,7 +21,9 @@ export default function ResultsNavbar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const navbarBackground =
-    pathname === '/analyze/results'
+    pathname === '/' || ['/help', '/report-issue', '/privacy', '/terms', '/faq', '/guide'].includes(pathname)
+      ? '#FAF9FE'
+      : pathname === '/analyze/results'
       ? '#F6F4FE'
       : pathname === '/dashboard' || pathname === '/community' || pathname === '/billing'
         ? '#FAF9FE'
@@ -104,7 +106,7 @@ export default function ResultsNavbar({
 
             <button
               onClick={startNewSearch}
-              className="hidden lg:flex h-8 px-4 rounded-lg bg-[#7E6BB3] text-white border border-[#7E6BB3] items-center gap-2 text-xs font-semibold transition-opacity hover:opacity-90 cursor-pointer whitespace-nowrap"
+              className="hidden sm:flex h-8 px-4 rounded-lg bg-[#7E6BB3] text-white border border-[#7E6BB3] items-center gap-2 text-xs font-semibold transition-opacity hover:opacity-90 cursor-pointer whitespace-nowrap"
             >
               <svg
                 className="w-4 h-4"

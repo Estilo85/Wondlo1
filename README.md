@@ -191,6 +191,23 @@ Then open:
 6. If needed, upgrade to a paid plan to increase search availability.
 7. Use the community or reporting flows to add safety context or flag issues.
 
+### Site navigation: desktop / PC
+
+1. Select the **Wondlo logo** to return home. On headers that show **HOME**, that link has the same destination.
+2. On sign-in and sign-up pages, use the top-right **Sign In** and **Sign Up** buttons; the current page is highlighted in purple.
+3. After signing in, the dashboard is the search starting point. When available, the most recent saved result opens automatically.
+4. Dashboard, Community, Billing, and Results use the full navigation header: **HOME**, **COMMUNITY**, **Analyse Another Adventure**, and the profile avatar.
+5. Other standard-header pages (including Help, FAQ, Guide, Settings, Privacy, and Terms) have **HOME** and account navigation. When signed in, the avatar opens **Settings** and **Sign Out**.
+6. On a Results page, use the sidebar toggle to view saved search history. The footer links to Help Center, Report an Issue, Privacy Policy, and Terms of Service; the FAQ and Guide are available from Help Center.
+
+### Site navigation: mobile phones
+
+1. Tap the **Wondlo logo** to return home. The sign-in and sign-up buttons remain visible in their top bar, with the current page highlighted in purple.
+2. On Dashboard, Community, Billing, and Results layouts, tap the **☰ menu** for **HOME**, **COMMUNITY**, and **Analyse Another Adventure**. On standard-header pages, the menu reveals **HOME** and any page-specific action.
+3. Tap **Analyse Another Adventure** to return to dashboard search. If a saved result is available, use **Back to Results** there to reopen it.
+4. The profile avatar is separate from the menu; tap it for **Settings** or **Sign Out**. On Results, the sidebar toggle opens previous searches.
+5. Scroll to the footer for Help Center, issue reporting, privacy, terms, contact, and social links. Open the FAQ or Guide from Help Center.
+
 ## Environment and configuration
 
 The app expects environment variables such as:

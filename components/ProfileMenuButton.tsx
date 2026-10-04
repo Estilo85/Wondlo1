@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -18,41 +17,52 @@ export default function ProfileMenuButton({
 }: {
   tone?: keyof typeof TONES;
 }) {
-  const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
+  const authRequestId = useRef(0);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!auth) return;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const requestId = ++authRequestId.current;
+      setIsSignedIn(Boolean(firebaseUser));
+      setAvatarUrl(firebaseUser?.photoURL ?? null);
+
       if (!firebaseUser) {
-        setAvatarUrl(null);
         return;
       }
 
       try {
-        const token = await firebaseUser.getIdToken();
-        const response = await fetch('/api/user/avatar', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
+        const response = await fetch(
+          `/api/user/avatar?uid=${encodeURIComponent(firebaseUser.uid)}`,
+          { cache: 'no-store' }
+        );
 
-        if (!response.ok) return;
+        if (!response.ok) throw new Error('Unable to load your profile picture.');
 
         const data = await response.json();
-        setAvatarUrl(
-          typeof data?.avatarUrl === 'string' && data.avatarUrl
-            ? data.avatarUrl
-            : null
-        );
+        if (requestId === authRequestId.current) {
+          setAvatarUrl(
+            typeof data?.avatarUrl === 'string' && data.avatarUrl
+              ? data.avatarUrl
+              : firebaseUser.photoURL
+          );
+        }
       } catch (error) {
-        console.error('Failed to load profile picture:', error);
+        if (requestId === authRequestId.current) {
+          setAvatarUrl(firebaseUser.photoURL);
+          console.error('Failed to load profile picture:', error);
+        }
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      authRequestId.current += 1;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -87,11 +97,8 @@ export default function ProfileMenuButton({
   const handleSignOut = async () => {
     setProfileOpen(false);
 
-    if (auth) {
-      await signOut(auth);
-    }
-
-    router.replace('/');
+    if (auth) await signOut(auth);
+    window.location.replace('/?signedOut=1');
   };
 
   return (
@@ -134,20 +141,32 @@ export default function ProfileMenuButton({
 
       {profileOpen && (
         <div className="absolute right-0 top-11 z-50 w-32 rounded-lg border border-[#EDE7FB] bg-white p-1 shadow-lg">
-          <Link
-            href="/settings"
-            onClick={() => setProfileOpen(false)}
-            className="block w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
-          >
-            Settings
-          </Link>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
-          >
-            Sign Out
-          </button>
+          {isSignedIn ? (
+            <>
+              <Link
+                href="/settings"
+                onClick={() => setProfileOpen(false)}
+                className="block w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
+              >
+                Settings
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/signin"
+              onClick={() => setProfileOpen(false)}
+              className="block w-full rounded-md px-3 py-2 text-center text-xs font-semibold text-[#2B2740] hover:bg-[#F6F4FE]"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       )}
     </div>

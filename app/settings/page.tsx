@@ -34,7 +34,7 @@ const inputClass =
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const cardStyle = {
-  backgroundColor: '#FCFCFB',
+  backgroundColor: '#FAF9FE',
   border: '0.1px solid rgba(43, 39, 64, 0.10)',
   boxShadow: '0 8px 20px rgba(43, 39, 64, 0.12)',
 };
@@ -360,7 +360,7 @@ export default function SettingsPage() {
       await signOut(auth);
     }
 
-    router.replace('/');
+    window.location.replace('/?signedOut=1');
   };
 
   if (!authReady) {
@@ -382,7 +382,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FAF9FE] text-[#2B2740]">
-      <Navbar />
+      <Navbar backgroundColor="#FAF9FE" />
 
       <main className="mx-auto w-full max-w-3xl flex-grow px-4 py-12 sm:px-6">
         <h1 className="font-poppins text-[32px] font-bold text-[#2B2740]">
@@ -448,7 +448,8 @@ export default function SettingsPage() {
                     type="button"
                     disabled={avatarBusy}
                     onClick={() => avatarInputRef.current?.click()}
-                    className="h-11 cursor-pointer rounded-[20px] bg-[#8B6BCB] px-5 font-inter text-sm font-semibold text-white transition-all hover:bg-[#7A5BB8] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-11 cursor-pointer rounded-[20px] px-5 font-inter text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{ background: 'linear-gradient(90deg, #7E6BB3 25%, #2B2740 100%)' }}
                   >
                     {avatarUrl ? 'Change Picture' : 'Upload Picture'}
                   </button>
@@ -565,7 +566,8 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={detailsBusy}
-                className="h-12 w-full cursor-pointer rounded-[20px] bg-[#8B6BCB] font-inter text-sm font-semibold text-white transition-all hover:bg-[#7A5BB8] disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-12 w-full cursor-pointer rounded-[20px] font-inter text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ background: 'linear-gradient(90deg, #7E6BB3 25%, #2B2740 100%)' }}
               >
                 {detailsBusy ? 'Saving...' : 'Save Changes'}
               </button>
@@ -583,7 +585,7 @@ export default function SettingsPage() {
             ) : plan ? (
               <>
                 <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl bg-[#F6F4FE] p-4">
+                  <div className="rounded-xl bg-[#FAF9FE] p-4">
                     <p className="font-inter text-xs font-medium text-[#6B7280]">
                       Current plan
                     </p>
@@ -595,7 +597,7 @@ export default function SettingsPage() {
                     )}
                   </div>
 
-                  <div className="rounded-xl bg-[#F6F4FE] p-4">
+                  <div className="rounded-xl bg-[#FAF9FE] p-4">
                     <p className="font-inter text-xs font-medium text-[#6B7280]">
                       Searches remaining
                     </p>
@@ -625,7 +627,8 @@ export default function SettingsPage() {
                   {!isPaidPlan(plan.key) && (
                     <Link
                       href="/payments"
-                      className="rounded-[20px] bg-[#8B6BCB] px-5 py-2.5 font-inter text-sm font-semibold text-white transition-all hover:bg-[#7A5BB8]"
+                      className="rounded-[20px] px-5 py-2.5 font-inter text-sm font-semibold text-white transition-all hover:opacity-90"
+                      style={{ background: 'linear-gradient(90deg, #7E6BB3 25%, #2B2740 100%)' }}
                     >
                       Upgrade Plan
                     </Link>
@@ -708,7 +711,8 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={passwordBusy}
-                className="h-12 w-full cursor-pointer rounded-[20px] bg-[#8B6BCB] font-inter text-sm font-semibold text-white transition-all hover:bg-[#7A5BB8] disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-12 w-full cursor-pointer rounded-[20px] font-inter text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ background: 'linear-gradient(90deg, #7E6BB3 25%, #2B2740 100%)' }}
               >
                 {passwordBusy ? 'Updating...' : 'Update Password'}
               </button>

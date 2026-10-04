@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { authenticateCommunityUser } from '@/lib/community-api';
+import {
+  authenticateCommunityUser,
+  getOptionalCommunityUserId,
+} from '@/lib/community-api';
+import { parseSafetyReview } from '@/lib/safety-reviews';
 
 export const runtime = 'nodejs';
-
 const ANSWER_KEYS = [
   'operatorAssessment',
   'adventurePreparation',
@@ -12,12 +15,9 @@ const ANSWER_KEYS = [
   'realWorldAccuracy',
 ] as const;
 
-function isScore(value: unknown): value is number {
-  return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= 5;
-}
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const viewerId = await getOptionalCommunityUserId(request);
     const reviews = await prisma.safetyReview.findMany({
       orderBy: { createdAt: 'desc' },
       take: 30,
@@ -29,6 +29,7 @@ export async function GET() {
     return NextResponse.json({
       reviews: reviews.map((review) => ({
         id: review.id,
+        isOwner: viewerId === review.userId,
         quote: review.experience,
         improvement: review.improvement,
         operatorName: review.operatorName,
@@ -68,47 +69,18 @@ export async function POST(request: Request) {
   if (!authentication.user) return authentication.response;
 
   try {
-    const body = (await request.json()) as Record<string, unknown>;
-    const operatorName =
-      typeof body.operatorName === 'string' ? body.operatorName.trim() : '';
-    const country = typeof body.country === 'string' ? body.country.trim() : '';
-    const activity =
-      typeof body.activity === 'string' ? body.activity.trim() : '';
-    const experience =
-      typeof body.experience === 'string' ? body.experience.trim() : '';
-    const improvement =
-      typeof body.improvement === 'string' ? body.improvement.trim() : '';
-    const answers = body.answers;
-
-    if (
-      !operatorName || operatorName.length > 120 ||
-      !country || country.length > 100 ||
-      !activity || activity.length > 100 ||
-      experience.length < 20 || experience.length > 1500 ||
-      improvement.length > 1200 ||
-      !answers || typeof answers !== 'object' || Array.isArray(answers) ||
-      !ANSWER_KEYS.every((key) => isScore((answers as Record<string, unknown>)[key]))
-    ) {
+    const reviewData = parseSafetyReview(await request.json());
+    if (!reviewData) {
       return NextResponse.json(
         { error: 'Complete the required safety review fields and try again.' },
         { status: 400 }
       );
     }
 
-    const scores = answers as Record<(typeof ANSWER_KEYS)[number], number>;
     const review = await prisma.safetyReview.create({
       data: {
         userId: authentication.user.id,
-        operatorName,
-        country,
-        activity,
-        operatorAssessment: scores.operatorAssessment,
-        adventurePreparation: scores.adventurePreparation,
-        riskAwareness: scores.riskAwareness,
-        safetyQuestions: scores.safetyQuestions,
-        realWorldAccuracy: scores.realWorldAccuracy,
-        experience,
-        improvement: improvement || null,
+        ...reviewData,
       },
       select: { id: true },
     });

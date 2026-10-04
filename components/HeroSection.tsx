@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import WaitlistModal from './WaitlistModal';
 import { auth } from '@/lib/firebase-client';
+import { saveRecentSearch } from '@/lib/recent-search';
 
 type SafetyCardData = {
   score: number;
@@ -259,6 +260,7 @@ export default function HeroSection({
       });
 
       if (response.ok) {
+        saveRecentSearch(auth.currentUser.uid, q);
         router.push(`/analyze/results?q=${encodeURIComponent(q)}`);
       } else if (response.status === 403) {
         const data = await response.json();

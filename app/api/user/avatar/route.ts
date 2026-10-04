@@ -34,6 +34,27 @@ function sanitizeAvatar(value: unknown): string | null | undefined {
 }
 
 export async function GET(request: Request) {
+  const firebaseId = new URL(request.url).searchParams.get('uid');
+  if (firebaseId) {
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(firebaseId)) {
+      return NextResponse.json({ error: 'Invalid user.' }, { status: 400 });
+    }
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { firebaseId },
+        select: { avatarUrl: true },
+      });
+      return NextResponse.json({ avatarUrl: user?.avatarUrl ?? null });
+    } catch (error) {
+      console.error('Public avatar loading error:', error);
+      return NextResponse.json(
+        { error: 'Unable to load profile picture.' },
+        { status: 500 }
+      );
+    }
+  }
+
   const authentication = await authenticateRequestUser(request);
   if (!authentication.user) return authentication.response;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -8,6 +8,7 @@ import HeroSection from '@/components/HeroSection';
 import Footer from '@/components/Footer';
 import { auth } from '@/lib/firebase-client';
 import { isPaidPlan } from '@/lib/billing';
+import { readRecentSearch, saveRecentSearch } from '@/lib/recent-search';
 import ResultsNavbar from '@/components/ResultsNavbar';
 
 export default function DashboardPage() {
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [searchesLeft, setSearchesLeft] = useState(3);
   const [searchLimitMessage, setSearchLimitMessage] = useState('');
   const [authReady, setAuthReady] = useState(false);
+  const isLoadingSearchHistory = useRef(false);
 
   useEffect(() => {
     if (!auth) {
@@ -30,6 +32,14 @@ export default function DashboardPage() {
       if (!firebaseUser) {
         router.replace('/');
       } else {
+        setHasPressedAnalyseAnother(
+          new URLSearchParams(window.location.search).get('newSearch') === '1'
+        );
+        const cachedQuery = readRecentSearch(firebaseUser.uid);
+        if (cachedQuery) {
+          setPreviousSearchQuery(cachedQuery);
+          setHasPreviousSearches(true);
+        }
         setAuthReady(true);
       }
     });
@@ -37,35 +47,87 @@ export default function DashboardPage() {
     return () => unsubscribe();
   }, [router]);
 
-  useEffect(() => {
-    if (!authReady || !auth?.currentUser) return;
+  const loadSearchHistory = useCallback(async (): Promise<boolean> => {
+    if (!auth?.currentUser || isLoadingSearchHistory.current) return false;
 
-    (async () => {
-      try {
-        const token = await auth.currentUser!.getIdToken();
-        const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`, {
-          cache: 'no-store',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const searches = data.searches ?? [];
-          setHasPreviousSearches(searches.length > 0);
-          setPreviousSearchQuery(searches[0]?.query ?? '');
-          setIsPaid(isPaidPlan(data.plan));
-          setSearchesLeft(data.left ?? data.freeSearchesLeft ?? 3);
+    isLoadingSearchHistory.current = true;
+    const controller = new AbortController();
+    const requestTimeoutId = window.setTimeout(() => controller.abort(), 6000);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/search', {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error('Search history is temporarily unavailable.');
 
-          const isNewSearchRequest =
-            new URLSearchParams(window.location.search).get('newSearch') === '1';
-
-          if (searches[0]?.query && !isNewSearchRequest) {
-            router.replace(`/analyze/results?q=${encodeURIComponent(searches[0].query)}`);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load search history:', error);
+      const data = await response.json();
+      const searches = data.searches ?? [];
+      setHasPreviousSearches(searches.length > 0);
+      setPreviousSearchQuery(searches[0]?.query ?? '');
+      if (searches[0]?.query) {
+        saveRecentSearch(auth.currentUser.uid, searches[0].query);
       }
-    })();
-  }, [authReady, router]);
+      setIsPaid(isPaidPlan(data.plan));
+      setSearchesLeft(data.left ?? data.freeSearchesLeft ?? 3);
+
+      const isNewSearchRequest =
+        new URLSearchParams(window.location.search).get('newSearch') === '1';
+
+      if (searches[0]?.query && !isNewSearchRequest) {
+        router.replace(`/analyze/results?q=${encodeURIComponent(searches[0].query)}`);
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to load search history:', error);
+      return false;
+    } finally {
+      window.clearTimeout(requestTimeoutId);
+      isLoadingSearchHistory.current = false;
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    let isActive = true;
+    let retryAttempt = 0;
+    let retryTimeoutId: number | undefined;
+
+    const loadAndRetry = async () => {
+      const loaded = await loadSearchHistory();
+      if (loaded || !isActive) return;
+
+      retryAttempt += 1;
+      const retryDelay = Math.min(5_000 * 2 ** (retryAttempt - 1), 60_000);
+      retryTimeoutId = window.setTimeout(() => void loadAndRetry(), retryDelay);
+    };
+
+    const retrySearchHistory = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        window.clearTimeout(retryTimeoutId);
+        retryAttempt = 0;
+        void loadAndRetry();
+      }
+    };
+
+    const initialLoadId = window.setTimeout(() => {
+      void loadAndRetry();
+    }, 0);
+    window.addEventListener('online', retrySearchHistory);
+    window.addEventListener('focus', retrySearchHistory);
+    document.addEventListener('visibilitychange', retrySearchHistory);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(initialLoadId);
+      window.clearTimeout(retryTimeoutId);
+      window.removeEventListener('online', retrySearchHistory);
+      window.removeEventListener('focus', retrySearchHistory);
+      document.removeEventListener('visibilitychange', retrySearchHistory);
+    };
+  }, [authReady, loadSearchHistory]);
 
 
   if (!authReady) {
@@ -113,7 +175,7 @@ export default function DashboardPage() {
               style={{ background: 'linear-gradient(90deg, #7E6BB3 25%, #2B2740 100%)' }}
             >
               <span aria-hidden="true">←</span>
-              Back to Previous Results
+              {hasPressedAnalyseAnother ? 'Back to Results' : 'Proceed to Results'}
             </button>
           </div>
         )}

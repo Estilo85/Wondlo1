@@ -34,29 +34,23 @@ export default function SignInPage() {
         }
 
         try {
-            const credential = await signInWithEmailAndPassword(auth, email, password);
+            await signInWithEmailAndPassword(auth, email, password);
             const redirect = new URLSearchParams(window.location.search).get('redirect');
-            let destination = redirect?.startsWith('/') && !redirect.startsWith('//')
+            const destination = redirect?.startsWith('/') && !redirect.startsWith('//')
                 ? redirect
                 : '/dashboard';
 
-            const redirectPath = destination.split('?')[0];
-            if (!redirect || redirectPath === '/dashboard') {
-                const token = await credential.user.getIdToken();
-                const response = await fetch(`/api/search?token=${encodeURIComponent(token)}`, {
-                    cache: 'no-store',
-                });
-                const data = response.ok ? await response.json() : null;
-                const previousQuery = data?.searches?.[0]?.query;
-
-                if (previousQuery) {
-                    destination = `/analyze/results?q=${encodeURIComponent(previousQuery)}`;
-                }
-            }
-
             router.replace(destination);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Invalid credentials.');
+            const authCode = (err as { code?: string })?.code;
+            setError(
+                authCode === 'auth/network-request-failed'
+                    ? 'Firebase could not be reached. Check your internet connection or network firewall, then try again.'
+                    : err instanceof Error
+                        ? err.message
+                        : 'Invalid credentials.'
+            );
+        } finally {
             setLoading(false);
         }
     };
@@ -127,7 +121,7 @@ export default function SignInPage() {
 
     return (
         <div className="flex min-h-screen flex-col bg-[#FAF9FE]">
-            <Navbar />
+            <Navbar backgroundColor="#FAF9FE" />
 
             <div className="flex flex-1 items-center justify-center px-4 pb-12 pt-24 sm:px-6 md:pt-28">
                 <div className="w-full max-w-md">

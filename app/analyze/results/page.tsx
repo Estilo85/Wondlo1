@@ -10,6 +10,7 @@ import FreeSidebar from '@/components/FreeSidebar';
 import PaidSidebar from '@/components/PaidSidebar';
 import SidebarToggleButton from '@/components/SidebarToggleButton';
 import { isPaidPlan } from '@/lib/billing';
+import { saveRecentSearch } from '@/lib/recent-search';
 import ResultsNavbar from '@/components/ResultsNavbar';
 import type { AnalysisReport, DimensionScores } from '@/lib/mock-analysis';
 
@@ -382,6 +383,11 @@ function ResultsContent() {
   useEffect(() => {
     if (!authReady || !auth?.currentUser) return;
 
+    const requestedQuery = searchParams.get('q')?.trim();
+    if (requestedQuery) {
+      saveRecentSearch(auth.currentUser.uid, requestedQuery);
+    }
+
     (async () => {
       try {
         const token = await auth.currentUser!.getIdToken();
@@ -423,7 +429,7 @@ function ResultsContent() {
         console.error('Failed to load search history:', error);
       }
     })();
-  }, [authReady, query]);
+  }, [authReady, query, searchParams]);
 
   if (!authReady) {
     return (
@@ -1623,7 +1629,7 @@ function ResultsContent() {
           onSeeBilling={() => router.push('/billing')}
           onSignOut={async () => {
             if (auth) await signOut(auth);
-            router.push('/signin');
+            window.location.replace('/?signedOut=1');
           }}
           savedAnalyses={savedAnalyses}
         />
@@ -1638,7 +1644,7 @@ function ResultsContent() {
           onUpgrade={() => router.push('/payments')}
           onSignOut={async () => {
             if (auth) await signOut(auth);
-            router.push('/signin');
+            window.location.replace('/?signedOut=1');
           }}
           savedAnalyses={savedAnalyses}
         />

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import {
   FiUsers,
   FiFileText,
@@ -23,10 +23,7 @@ import {
   FiImage,
   FiStar,
   FiBell,
-  FiCheckCircle,
-  FiCornerDownRight,
   FiTag,
-  FiClock,
 } from 'react-icons/fi';
 import {
   FaWhatsapp,
@@ -43,7 +40,7 @@ import {
   type CommunityReportReason,
 } from '@/lib/community-reports';
 import { MAX_POST_IMAGES } from '@/lib/community-images';
-import { formatTag, MAX_POST_TAGS, normaliseTag } from '@/lib/community-tags';
+import { formatTag } from '@/lib/community-tags';
 import { resizePostImage } from '@/lib/image';
 
 type PostCategory = 'Trip Experience' | 'Safety Warning';
@@ -196,34 +193,6 @@ function formatPostTimestamp(timestamp: string) {
   const elapsedHours = Math.floor(elapsedMinutes / 60);
   if (elapsedHours < 24) return `${elapsedHours}h ago`;
   return `${Math.floor(elapsedHours / 24)}d ago`;
-}
-
-/*
- * Comments get the same relative time as posts. Older than a week the exact date
- * is more use than "12d ago", so anything past that switches format rather than
- * making the reader do arithmetic.
- */
-function formatCommentTimestamp(timestamp?: string) {
-  if (!timestamp) return '';
-
-  const created = new Date(timestamp).getTime();
-
-  if (!Number.isFinite(created)) return '';
-
-  const elapsedMinutes = Math.floor((Date.now() - created) / 60_000);
-
-  if (elapsedMinutes < 1) return 'Just now';
-  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
-  if (elapsedMinutes < 60 * 24) return `${Math.floor(elapsedMinutes / 60)}h ago`;
-  if (elapsedMinutes < 60 * 24 * 7) {
-    return `${Math.floor(elapsedMinutes / (60 * 24))}d ago`;
-  }
-
-  return new Date(timestamp).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 async function sendCommunityRequest(
@@ -912,7 +881,6 @@ export default function CommunityPage() {
   const [draftBody, setDraftBody] = useState('');
   const [draftImages, setDraftImages] = useState<DraftImage[]>([]);
   const [draftTags, setDraftTags] = useState<string[]>([]);
-  const [draftTagInput, setDraftTagInput] = useState('');
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
   const [sharedPostId, setSharedPostId] = useState<string | null>(null);
@@ -947,16 +915,6 @@ export default function CommunityPage() {
     {}
   );
 
-  /*
-   * Which comment a reply is being written under, per post. A null entry means
-   * the reply box is closed for that post.
-   */
-  const [replyTargets, setReplyTargets] = useState<
-    Record<string, string | null>
-  >({});
-
-  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
-
   const [editingCommentId, setEditingCommentId] = useState<string | null>(
     null
   );
@@ -967,29 +925,23 @@ export default function CommunityPage() {
 
   const [commentBusyId, setCommentBusyId] = useState<string | null>(null);
 
-  /*
-   * A post id with a post level action in flight, so the menu that opened the
-   * warning and the post card cannot be triggered twice at once.
-   */
-  const [postBusyId, setPostBusyId] = useState<string | null>(null);
-
   const [localComments, setLocalComments] = useState<
     Record<string, LocalComment[]>
   >({});
 
-  /*
-   * Which image of a multi image post is on screen. A post with one image never
-   * touches this, and a post with several keeps the rest of the strip hidden
-   * until it is tapped.
-   */
-  const [imageIndexes, setImageIndexes] = useState<Record<string, number>>({});
+  const postLoadRequestId = useRef(0);
 
-  const loadCommunityPosts = useCallback(async () => {
-    const token = await auth?.currentUser?.getIdToken();
+  const loadCommunityPosts = useCallback(async (
+    firebaseUser: FirebaseUser | null = auth?.currentUser ?? null
+  ) => {
+    const requestId = ++postLoadRequestId.current;
+    const token = await firebaseUser?.getIdToken();
     const response = await fetch('/api/community', {
       cache: 'no-store',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
+
+    if (requestId !== postLoadRequestId.current) return;
 
     if (!response.ok) {
       let message = 'Unable to load community posts. Please try again.';
@@ -1025,6 +977,8 @@ export default function CommunityPage() {
         commentsList: LocalComment[];
       }>;
     };
+
+    if (requestId !== postLoadRequestId.current) return;
 
     const posts = data.posts.map((post) => ({
       id: post.id,
@@ -1125,16 +1079,20 @@ export default function CommunityPage() {
   useEffect(() => {
     let isActive = true;
 
-    void (async () => {
-      try {
-        await loadCommunityPosts();
-        if (isActive) setCommunityError('');
-      } catch {
-        if (isActive) {
-          setCommunityError('Unable to sync community posts. Please try again.');
+    const syncForUser = (firebaseUser: FirebaseUser | null) => {
+      void (async () => {
+        try {
+          await loadCommunityPosts(firebaseUser);
+          if (isActive) setCommunityError('');
+        } catch {
+          if (isActive) {
+            setCommunityError('Unable to sync community posts. Please try again.');
+          }
         }
-      }
-    })();
+      })();
+    };
+
+    if (!auth) syncForUser(null);
     void (async () => {
       try {
         await loadCommunityStats();
@@ -1196,13 +1154,7 @@ export default function CommunityPage() {
 
     const unsubscribe = auth
       ? onAuthStateChanged(auth, (user) => {
-          void (async () => {
-            try {
-              await loadCommunityPosts();
-            } catch {
-              /* ignore */
-            }
-          })();
+          syncForUser(user);
           void loadCommunityStats();
           void loadUnreadNotifications();
 
@@ -1552,7 +1504,6 @@ export default function CommunityPage() {
     setDraftBody('');
     setDraftImages([]);
     setDraftTags([]);
-    setDraftTagInput('');
     setEditingPostId(null);
   };
 
@@ -1591,7 +1542,6 @@ export default function CommunityPage() {
       }))
     );
     setDraftTags(post.tags);
-    setDraftTagInput('');
     setIsPostComposerOpen(true);
   };
 
@@ -1641,24 +1591,6 @@ export default function CommunityPage() {
       postId,
       commentId: comment.id,
       label: comment.text,
-    });
-  };
-
-  const openMemberReportModal = (
-    post: CommunityPost,
-    comment?: LocalComment
-  ) => {
-    setOpenPostMenuId(null);
-    setCommunityError('');
-    setCommunityNotice('');
-    setReportReason('');
-    setReportDetails('');
-    setReportTarget({
-      postId: post.id,
-      userId: post.authorId,
-      label: comment
-        ? `${post.author} — "${comment.text}"`
-        : `${post.author} — "${post.title}"`,
     });
   };
 
@@ -1769,31 +1701,6 @@ export default function CommunityPage() {
 
   const removePostImage = (index: number) => {
     setDraftImages((current) => current.filter((_, i) => i !== index));
-  };
-
-  const addDraftTag = () => {
-    const tag = normaliseTag(draftTagInput);
-
-    if (!tag) {
-      setDraftTagInput('');
-      return;
-    }
-
-    if (draftTags.includes(tag)) {
-      setDraftTagInput('');
-      return;
-    }
-
-    if (draftTags.length >= MAX_POST_TAGS) {
-      setCommunityError(
-        `You can add up to ${MAX_POST_TAGS} topics to a post.`
-      );
-      return;
-    }
-
-    setDraftTags((current) => [...current, tag]);
-    setDraftTagInput('');
-    setCommunityError('');
   };
 
   const submitAdventurePost = async (
@@ -1946,13 +1853,6 @@ export default function CommunityPage() {
     );
   };
 
-  const openReplyBox = (postId: string, commentId: string) => {
-    setReplyTargets((current) => ({
-      ...current,
-      [postId]: current[postId] === commentId ? null : commentId,
-    }));
-  };
-
   /*
    * Applies a comment change to local state instead of reloading the whole feed.
    * A reply arrives with the id of the comment it hangs from, which is exactly
@@ -2023,7 +1923,6 @@ export default function CommunityPage() {
                 : comment
             )
         );
-        setReplyTargets((current) => ({ ...current, [postId]: null }));
       } else {
         applyCommentChange(postId, result.comments, (comments) => [
           ...comments,
@@ -2650,7 +2549,7 @@ export default function CommunityPage() {
               </button>
 
               <Link
-                href="/safety-reviews"
+                href="/safety-reviews?returnTo=%2Fcommunity"
                 className="w-full lg:w-[484px] lg:flex-shrink-0"
               >
                 <span className={secondaryButtonClass}>

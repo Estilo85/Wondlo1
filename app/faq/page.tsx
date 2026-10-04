@@ -136,6 +136,14 @@ export default function FaqPage() {
       <Navbar />
 
       <main className="flex-grow w-full max-w-4xl mx-auto px-6 py-12">
+        <Link
+          href="/help"
+          className="mb-6 inline-flex items-center gap-2 text-xs font-semibold text-[#7E6BB3] hover:underline"
+        >
+          <span aria-hidden="true" className="text-[#3D8A1E] text-base font-extrabold leading-none">←</span>
+          Back to Help Center
+        </Link>
+
         <div
           className="w-full rounded-3xl p-8 sm:p-12"
           style={{

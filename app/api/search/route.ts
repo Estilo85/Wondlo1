@@ -91,7 +91,11 @@ function responseForUser(user: BillingUser & { name: string; email: string }) {
 
 export async function GET(req: Request) {
   try {
-    const token = new URL(req.url).searchParams.get('token');
+    const authorization = req.headers.get('authorization');
+    const bearerToken = authorization?.startsWith('Bearer ')
+      ? authorization.slice('Bearer '.length)
+      : null;
+    const token = bearerToken || new URL(req.url).searchParams.get('token');
     if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
     const user = await getUser(token);

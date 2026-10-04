@@ -2,6 +2,30 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 
+const SITE_PAGES = [
+  { label: 'Home / Search', href: '/', desktop: 'Wondlo logo or HOME link', mobile: 'Wondlo logo; menu → HOME', access: 'Public' },
+  { label: 'Sign In', href: '/signin', desktop: 'Top-right Sign In button', mobile: 'Sign In button in the top bar', access: 'Public' },
+  { label: 'Sign Up', href: '/signup', desktop: 'Top-right Sign Up button', mobile: 'Sign Up button in the top bar', access: 'Public' },
+  { label: 'Dashboard', href: '/dashboard', desktop: 'Shown after signing in', mobile: 'Shown after signing in', access: 'Sign in required' },
+  { label: 'Safety Results', href: '/analyze/results?q=Summit%20Trails%20Expeditions', desktop: 'Search an operator or choose saved history', mobile: 'Search an operator or choose saved history', access: 'Sign in required' },
+  { label: 'Community', href: '/community', desktop: 'COMMUNITY in the top navigation', mobile: 'Menu → COMMUNITY', access: 'Public to browse; sign in to participate' },
+  { label: 'Safety Reviews', href: '/safety-reviews', desktop: 'Community → Read Safety Reviews, or homepage testimonials', mobile: 'Community → Read Safety Reviews, or homepage testimonials', access: 'Public' },
+  { label: 'Safety Help', href: '/safety-help', desktop: 'Result actions or footer', mobile: 'Result actions or footer', access: 'Public form' },
+  { label: 'Account Settings', href: '/settings', desktop: 'Profile avatar → Settings', mobile: 'Profile avatar → Settings', access: 'Sign in required' },
+  { label: 'Payments & Plans', href: '/payments', desktop: 'Upgrade action or billing links', mobile: 'Upgrade action or billing links', access: 'Public plan information' },
+  { label: 'Billing', href: '/billing', desktop: 'Profile avatar → Settings → Manage Billing', mobile: 'Profile avatar → Settings → Manage Billing', access: 'Sign in required' },
+  { label: 'Checkout', href: '/checkout', desktop: 'Choose a plan, then continue to checkout', mobile: 'Choose a plan, then continue to checkout', access: 'Plan selection required' },
+  { label: 'Help Center', href: '/help', desktop: 'Scroll to footer → Help Center', mobile: 'Scroll to footer → Help Center', access: 'Public' },
+  { label: 'User Guide', href: '/guide', desktop: 'Help Center → Read the User Guide', mobile: 'Help Center → Read the User Guide', access: 'Public' },
+  { label: 'FAQ', href: '/faq', desktop: 'Help Center or footer', mobile: 'Help Center or footer', access: 'Public' },
+  { label: 'Report an Issue', href: '/report-issue', desktop: 'Help Center, footer, or result actions', mobile: 'Help Center, footer, or result actions', access: 'Public form' },
+  { label: 'Privacy Policy', href: '/privacy', desktop: 'Scroll to footer → Privacy Policy', mobile: 'Scroll to footer → Privacy Policy', access: 'Public' },
+  { label: 'Terms of Service', href: '/terms', desktop: 'Scroll to footer → Terms of Service', mobile: 'Scroll to footer → Terms of Service', access: 'Public' },
+  { label: 'Set Password', href: '/set-password', desktop: 'Open Set Your Password in the welcome email', mobile: 'Open Set Your Password in the welcome email', access: 'Email link' },
+  { label: 'Reset Password', href: '/reset-password', desktop: 'Sign In → Forgot password? Reset', mobile: 'Sign In → Forgot password? Reset', access: 'Email link' },
+  { label: 'Telegram Redirect', href: '/redirecting', desktop: 'Footer → Join Wondlo on Telegram', mobile: 'Footer → Join Wondlo on Telegram', access: 'External community link' },
+] as const;
+
 export default function GuidePage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF9FE] text-[#2B2740]">
@@ -439,70 +463,55 @@ export default function GuidePage() {
                 </div>
 
                 <h3 className="font-poppins mb-3 text-base font-semibold text-[#2B2740]">
-                  Site Map
+                  Step-by-Step Navigation: Desktop / PC
                 </h3>
+                <ol className="mb-7 list-decimal space-y-2 pl-5 text-sm leading-6">
+                  <li>Click the <strong>Wondlo logo</strong> to return home. Where a <strong>HOME</strong> link is shown, it also returns home.</li>
+                  <li>On sign-in and sign-up pages, use the top-right <strong>Sign In</strong> and <strong>Sign Up</strong> buttons; the current page is highlighted in purple.</li>
+                  <li>On the dashboard, community, billing, and results layouts, the header has <strong>HOME</strong>, <strong>COMMUNITY</strong>, <strong>Analyse Another Adventure</strong>, and the profile avatar. Select the page link you need or start a new search.</li>
+                  <li>On pages with the standard header (such as Help, FAQ, Settings, and this Guide), use <strong>HOME</strong>, the account buttons, or the profile avatar. The avatar opens Settings and Sign Out when signed in.</li>
+                  <li>On a results page, use the sidebar toggle to open previous searches and select one to revisit its report.</li>
+                  <li>For Help, FAQ, issue reporting, privacy, and terms, use the links in the footer; the FAQ and Guide can also be opened from Help Center.</li>
+                </ol>
 
-                <div className="overflow-hidden rounded-xl border border-[#2B2740]/10">
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[650px] text-sm">
-                      <thead
-                        style={{
-                          background:
-                            'linear-gradient(90deg, #7E6BB3 25%, #2B2740 100%)',
-                        }}
-                      >
-                        <tr className="text-left font-poppins text-white">
-                          <th className="px-4 py-3 font-semibold">Page</th>
-                          <th className="px-4 py-3 font-semibold">Where to find it</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#2B2740]/10">
-                        <tr><td className="px-4 py-3 align-top">Homepage</td><td className="px-4 py-3">Logo / HOME link</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Sign Up</td><td className="px-4 py-3"><Link href="/signup" className="text-[#7E6BB3] hover:underline">Sign Up</Link> button</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Sign In</td><td className="px-4 py-3"><Link href="/signin" className="text-[#7E6BB3] hover:underline">Sign In</Link> button</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Community</td><td className="px-4 py-3">Navbar, after Sign In</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Set Password</td><td className="px-4 py-3">Link inside the welcome email</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Dashboard</td><td className="px-4 py-3">After signing in</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Safety Report</td><td className="px-4 py-3">Automatically after a search</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Upgrade / Plans</td><td className="px-4 py-3">Upgrade button when a search limit is reached</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Help Center</td><td className="px-4 py-3">Footer &rarr; Help Center</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Report an Issue / Request a Feature</td><td className="px-4 py-3">Footer &rarr; Report an Issue, or Actions bar on a report</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Request Safety Help</td><td className="px-4 py-3">Actions bar on a report</td></tr>
-                        <tr><td className="px-4 py-3 align-top">Privacy Policy / Terms</td><td className="px-4 py-3">Footer</td></tr>
-                      </tbody>
-                    </table>
+                <h3 className="font-poppins mb-3 text-base font-semibold text-[#2B2740]">
+                  Step-by-Step Navigation: Mobile Phones
+                </h3>
+                <ol className="mb-7 list-decimal space-y-2 pl-5 text-sm leading-6">
+                  <li>Tap the <strong>Wondlo logo</strong> to return home. On sign-in and sign-up pages, both account buttons remain visible in the top bar and the current page is purple.</li>
+                  <li>On dashboard, community, billing, and results layouts, tap the <strong>☰ menu</strong> to reveal HOME and COMMUNITY. The menu also contains <strong>Analyse Another Adventure</strong>.</li>
+                  <li>On standard-header pages such as Help, FAQ, and Guide, tap the <strong>☰ menu</strong> to reveal HOME. If shown, <strong>Analyse Another</strong> is in this menu too.</li>
+                  <li>Tap <strong>Analyse Another Adventure</strong> to open dashboard search. If you have a saved result, choose <strong>Back to Results</strong> on the dashboard to reopen it.</li>
+                  <li>Tap the separate <strong>profile avatar</strong> to open Settings or Sign Out. On results pages, the sidebar toggle opens previous searches.</li>
+                  <li>Scroll to the footer for Help Center, issue reporting, privacy, terms, and contact links. The FAQ and Guide are linked from Help Center.</li>
+                </ol>
+
+                <div className="mb-7 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6">
+                    <strong>Desktop tip:</strong> Main links sit across the top of the page. The profile avatar is at the right edge; select it for account settings or sign-out.
+                  </div>
+                  <div className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6">
+                    <strong>Mobile tip:</strong> Use the menu button to reveal page links, and scroll to the footer for Help Center and legal links. The profile avatar remains a separate button in the top bar.
                   </div>
                 </div>
 
-                <h3 className="font-poppins mb-3 mt-7 text-base font-semibold text-[#2B2740]">
-                  Common Navigation Elements
+                <h3 className="font-poppins mb-3 text-base font-semibold text-[#2B2740]">
+                  Site Map — All User-Facing Pages
                 </h3>
-
+                <p className="mb-4 text-sm leading-6">
+                  Select any page below to open it. Each entry shows its desktop and mobile route; account-only pages will ask you to sign in.
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div
-                    className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6"
-                    style={{
-                      background:'radial-gradient(circle at bottom right, #C7B5F5 0%, #EDE7FB 75%)'}}>
-                    <strong>Top navigation bar</strong> — Wondlo logo (home), HOME, Sign In, Community, Sign Up, and (when relevant) Analyse Another.
-                  </div>
-                  <div
-                    className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6"
-                    style={{
-                      background:'radial-gradient(circle at bottom left, #C7B5F5 0%, #EDE7FB 75%)'}}>
-                    <strong>Footer</strong> — Help Center, Report an Issue, Privacy Policy, Terms of Service, contact email, and social links.
-                  </div>
-                  <div
-                    className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6"
-                    style={{
-                      background:'radial-gradient(circle at top right, #C7B5F5 0%, #EDE7FB 75%)'}}>
-                    <strong>Profile menu</strong> — avatar with a green dot (top-right on Dashboard, reports, Upgrade, and Billing pages). Opens <strong>Settings</strong> and <strong>Sign Out</strong>.
-                  </div>
-                  <div
-                    className="rounded-xl bg-[#EDE7FB] p-4 text-sm leading-6"
-                    style={{
-                      background:'radial-gradient(circle at top left, #C7B5F5 0%, #EDE7FB 75%)'}}>
-                    <strong>Sidebar</strong> — on report pages (toggle button, top-right). Your name, searches remaining, <strong>previous search history</strong>, and <strong>safety cards</strong>.
-                  </div>
+                  {SITE_PAGES.map(({ label, href, desktop, mobile, access }) => (
+                    <div key={href} className="rounded-xl border border-[#2B2740]/10 bg-[#FAF9FE] p-4 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#F0EBFB]">
+                      <Link href={href} className="font-poppins text-sm font-semibold text-[#7E6BB3] hover:underline">
+                        {label}
+                      </Link>
+                      <p className="mt-2 text-xs leading-5"><strong>Desktop / PC:</strong> {desktop}</p>
+                      <p className="mt-1 text-xs leading-5"><strong>Mobile:</strong> {mobile}</p>
+                      <p className="mt-1 text-xs leading-5 text-[#77727F]"><strong>Access:</strong> {access}</p>
+                    </div>
+                  ))}
                 </div>
               </section>
 

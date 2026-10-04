@@ -3,23 +3,43 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import { FiMenu, FiX } from 'react-icons/fi';
+import ProfileMenuButton from '@/components/ProfileMenuButton';
+import { auth } from '@/lib/firebase-client';
 
 export default function Navbar({
   onAnalyseAnother,
+  backgroundColor,
 }: {
   onAnalyseAnother?: () => void;
+  backgroundColor?: string;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const isHome = pathname === '/';
+  const isCommunity = pathname === '/community';
   const isSignIn = pathname === '/signin';
-  const isSignUp = pathname === '/signup' || (!isSignIn && !isHome);
+  const isSignUp = pathname === '/signup';
+  const isAuthPage = isSignIn || isSignUp;
+  const footerPagePaths = ['/help', '/report-issue', '/privacy', '/terms', '/faq', '/guide'];
+  const pageBackgroundColor = backgroundColor ?? (
+    footerPagePaths.includes(pathname) ? '#FAF9FE' : '#FFFFFF'
+  );
 
   const closeMobileMenu = () => {
     setMobileOpen(false);
   };
+
+  useEffect(() => {
+    if (!auth) return;
+
+    return onAuthStateChanged(auth, (firebaseUser) => {
+      setIsSignedIn(Boolean(firebaseUser));
+    });
+  }, []);
 
   useEffect(() => {
     if (!mobileOpen) {
@@ -51,7 +71,10 @@ export default function Navbar({
   }, [mobileOpen]);
 
   return (
-    <nav className="w-full bg-white border-b border-[#EDE7FB] py-4 px-4 sm:px-12">
+    <nav
+      className="w-full border-b border-[#EDE7FB] py-4 px-4 sm:px-12"
+      style={{ backgroundColor: pageBackgroundColor }}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center">
           <Link
@@ -74,6 +97,18 @@ export default function Navbar({
             >
               HOME
             </Link>
+            {isSignedIn && !isAuthPage && (
+              <Link
+                href="/community"
+                className={
+                  isCommunity
+                    ? 'text-[#7E6BB3] border-b-2 border-[#7E6BB3] pb-0.5'
+                    : 'hover:text-[#2B2740] transition-colors pb-0.5'
+                }
+              >
+                COMMUNITY
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -87,27 +122,33 @@ export default function Navbar({
               </button>
             )}
 
-            <Link
-              href="/signin"
-              className={
-                isSignIn
-                  ? 'px-4 py-1.5 rounded-lg bg-[#7E6BB3] text-white font-poppins font-semibold text-xs transition-colors shadow-xs'
-                  : 'px-4 py-1.5 rounded-lg border border-[#EDE7FB] text-[#2B2740] font-poppins font-semibold text-xs hover:bg-[#F6F4FE] transition-colors'
-              }
-            >
-              Sign In
-            </Link>
+            {isSignedIn && !isAuthPage ? (
+              <ProfileMenuButton tone="soft" />
+            ) : (
+              <>
+                <Link
+                  href="/signin"
+                  className={
+                    isSignIn
+                      ? 'px-4 py-1.5 rounded-lg bg-[#7E6BB3] text-white font-poppins font-semibold text-xs transition-colors shadow-xs'
+                      : 'px-4 py-1.5 rounded-lg border border-[#EDE7FB] text-[#2B2740] font-poppins font-semibold text-xs hover:bg-[#F6F4FE] transition-colors'
+                  }
+                >
+                  Sign In
+                </Link>
 
-            <Link
-              href="/signup"
-              className={
-                isSignUp
-                  ? 'px-4 py-1.5 rounded-lg bg-[#7E6BB3] text-white font-poppins font-semibold text-xs hover:bg-[#68559D] transition-colors shadow-xs'
-                  : 'px-4 py-1.5 rounded-lg border border-[#EDE7FB] text-[#2B2740] font-poppins font-semibold text-xs hover:bg-[#F6F4FE] transition-colors'
-              }
-            >
-              Sign Up
-            </Link>
+                <Link
+                  href="/signup"
+                  className={
+                    isSignUp
+                      ? 'px-4 py-1.5 rounded-lg bg-[#7E6BB3] text-white font-poppins font-semibold text-xs hover:bg-[#68559D] transition-colors shadow-xs'
+                      : 'px-4 py-1.5 rounded-lg border border-[#EDE7FB] text-[#2B2740] font-poppins font-semibold text-xs hover:bg-[#F6F4FE] transition-colors'
+                  }
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
 
             <button
               type="button"
@@ -143,6 +184,20 @@ export default function Navbar({
             >
               HOME
             </Link>
+
+            {isSignedIn && !isAuthPage && (
+              <Link
+                href="/community"
+                className={
+                  isCommunity
+                    ? 'rounded-[10px] bg-[#EDE7FB] px-4 py-3 text-[#7E6BB3]'
+                    : 'rounded-[10px] px-4 py-3 hover:bg-[#F6F4FE]'
+                }
+                onClick={closeMobileMenu}
+              >
+                COMMUNITY
+              </Link>
+            )}
 
             {onAnalyseAnother && (
               <button
