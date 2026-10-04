@@ -11,6 +11,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { FaUserFriends } from 'react-icons/fa';
+import { readRecentSearch } from '@/lib/recent-search';
 
 export default function SignInPage() {
     const router = useRouter();
@@ -34,21 +35,38 @@ export default function SignInPage() {
         }
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const credential = await signInWithEmailAndPassword(auth, email, password);
             const redirect = new URLSearchParams(window.location.search).get('redirect');
             const destination = redirect?.startsWith('/') && !redirect.startsWith('//')
                 ? redirect
                 : '/dashboard';
 
-            router.replace(destination);
+            const redirectPath = destination.split('?')[0];
+            const isNewSearch = new URL(destination, window.location.origin).searchParams.get('newSearch') === '1';
+            const shouldCheckSearchHistory = (!redirect || redirectPath === '/dashboard') && !isNewSearch;
+
+            if (shouldCheckSearchHistory) {
+                const cachedQuery = readRecentSearch(credential.user.uid);
+                router.replace(
+                    cachedQuery
+                        ? `/analyze/results?q=${encodeURIComponent(cachedQuery)}`
+                        : destination
+                );
+            } else {
+                router.replace(destination);
+            }
         } catch (err: unknown) {
             const authCode = (err as { code?: string })?.code;
             setError(
-                authCode === 'auth/network-request-failed'
-                    ? 'Firebase could not be reached. Check your internet connection or network firewall, then try again.'
-                    : err instanceof Error
-                        ? err.message
-                        : 'Invalid credentials.'
+                authCode === 'auth/invalid-credential' ||
+                authCode === 'auth/wrong-password' ||
+                authCode === 'auth/user-not-found'
+                    ? 'The email or password is incorrect. Check your details and try again.'
+                    : authCode === 'auth/network-request-failed'
+                        ? 'Firebase could not be reached. Check your internet connection or network firewall, then try again.'
+                        : err instanceof Error
+                            ? err.message
+                            : 'Unable to sign in. Please try again.'
             );
         } finally {
             setLoading(false);

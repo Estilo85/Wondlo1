@@ -51,14 +51,11 @@ export default function DashboardPage() {
     if (!auth?.currentUser || isLoadingSearchHistory.current) return false;
 
     isLoadingSearchHistory.current = true;
-    const controller = new AbortController();
-    const requestTimeoutId = window.setTimeout(() => controller.abort(), 6000);
     try {
       const token = await auth.currentUser.getIdToken();
       const response = await fetch('/api/search', {
         cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
       });
       if (!response.ok) throw new Error('Search history is temporarily unavailable.');
 
@@ -83,7 +80,6 @@ export default function DashboardPage() {
       console.error('Failed to load search history:', error);
       return false;
     } finally {
-      window.clearTimeout(requestTimeoutId);
       isLoadingSearchHistory.current = false;
     }
   }, [router]);
